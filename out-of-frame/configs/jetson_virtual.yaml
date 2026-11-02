@@ -1,0 +1,30 @@
+# Jetson + SIYI A8 mini held still: the photo box glides over the fixed camera view
+# (like the Mac webcam version). The gimbal only frames the play area; aim it once.
+camera:
+  # Hardware-decoded RTSP from the A8 mini. It streams H.265 even though the path is "main.264";
+  # if it is switched to H.264, swap rtph265depay/h265parse for rtph264depay/h264parse.
+  source: >-
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    rtph265depay ! h265parse ! nvv4l2decoder ! nvvidconv !
+    video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
+    appsink drop=1 max-buffers=1 sync=false
+  mirror: true   # players see themselves like a mirror
+
+framer:
+  mode: virtual
+  virtual:
+    box_width_frac: 0.45         # round 1
+    box_width_frac_final: 0.50   # box grows each round -> harder
+
+detector:
+  # Build once on the Jetson:  yolo export model=yolo11n-seg.pt format=engine half=True imgsz=640
+  model: yolo11n-seg.engine
+  device: "0"
+  half: true
+
+game:
+  shots: 5
+  require_player_in_view: true   # walking off camera doesn't count as a dodge
+
+display:
+  fullscreen: true

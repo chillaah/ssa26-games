@@ -1,11 +1,11 @@
 # Jetson Orin Nano 8GB + SIYI A8 mini on the drone.
 # The gimbal physically swings to random angles; the photo is the camera image.
 camera:
-  # Hardware-decoded RTSP from the A8 mini. If the camera is set to H.265,
-  # swap rtph264depay/h264parse for rtph265depay/h265parse.
+  # Hardware-decoded RTSP from the A8 mini. It streams H.265 even though the path is "main.264";
+  # if it is switched to H.264, swap rtph265depay/h265parse for rtph264depay/h264parse.
   source: >-
     gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
-    rtph264depay ! h264parse ! nvv4l2decoder ! nvvidconv !
+    rtph265depay ! h265parse ! nvv4l2decoder ! nvvidconv !
     video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
     appsink drop=1 max-buffers=1 sync=false
   mirror: false

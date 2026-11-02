@@ -1,0 +1,44 @@
+# Bench test: Jetson + SIYI A8 mini standing upright on a table (upside-down mode),
+# camera at roughly desk height. Same as jetson.yaml except the pitch range aims
+# level to slightly up, at people standing in front of the table.
+camera:
+  # Hardware-decoded RTSP from the A8 mini. It streams H.265 even though the path is "main.264";
+  # if it is switched to H.264, swap rtph265depay/h265parse for rtph264depay/h264parse.
+  source: >-
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    rtph265depay ! h265parse ! nvv4l2decoder ! nvvidconv !
+    video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
+    appsink drop=1 max-buffers=1 sync=false
+  mirror: false
+
+framer:
+  mode: siyi
+  siyi:
+    # Gimbal control: "udp" over Ethernet, or "serial" over the TTL UART cable.
+    # Video still needs the camera's Ethernet connection either way.
+    link: udp
+    ip: 192.168.144.25
+    port: 37260
+    serial_port: /dev/ttyTHS0   # 40-pin header pins 8/10; a USB-serial adapter is /dev/ttyUSB0
+    baud: 115200
+    # Play area as gimbal angles, for a camera at desk height.
+    yaw_min: -50
+    yaw_max: 50
+    pitch_min: -10
+    pitch_max: 15    # A8 mini max is +25
+    home_yaw: 0
+    home_pitch: 0
+    photo_box_frac: 0.45  # the photo is the centre 45% of the image, drawn as the box
+
+detector:
+  # Build once on the Jetson:  yolo export model=yolo11n-seg.pt format=engine half=True imgsz=640
+  model: yolo11n-seg.engine
+  device: "0"
+  half: true
+
+game:
+  shots: 5
+  require_player_in_view: false   # the photo is the whole view, so this can't be checked
+
+display:
+  fullscreen: true

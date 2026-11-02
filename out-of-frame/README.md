@@ -89,8 +89,8 @@ Gimbal control uses the same cable (UDP 37260). Calibrate the yaw/pitch play are
    python3 -m outofframe --config configs/jetson.yaml
    ```
 
-If the A8 mini is set to H.265, change `rtph264depay ! h264parse` to `rtph265depay ! h265parse`
-in the camera pipeline.
+The A8 mini streams H.265 by default (even on the `main.264` path), so the pipeline uses
+`rtph265depay ! h265parse`. If the camera is switched to H.264, change it to `rtph264depay ! h264parse`.
 
 ## Tuning
 

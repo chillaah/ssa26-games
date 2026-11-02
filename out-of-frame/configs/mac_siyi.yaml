@@ -1,0 +1,32 @@
+# Mac/laptop + SIYI A8 mini over Ethernet (USB-C Ethernet adapter).
+# Set the adapter to a static IP: 192.168.144.20, subnet 255.255.255.0, no router.
+camera:
+  source: rtsp://192.168.144.25:8554/main.264
+  mirror: false
+
+framer:
+  mode: siyi
+  siyi:
+    link: udp            # gimbal control goes over the same Ethernet cable
+    ip: 192.168.144.25
+    port: 37260
+    # Play area as gimbal angles. Calibrate at the booth so the extremes
+    # still cover the floor where visitors stand.
+    yaw_min: -50
+    yaw_max: 50
+    pitch_min: -45
+    pitch_max: -5
+    home_yaw: 0
+    home_pitch: -20
+    photo_box_frac: 0.8
+
+detector:
+  model: yolo11n-seg.pt
+  device: mps
+
+game:
+  shots: 5
+  require_player_in_view: false   # the photo is the whole view, so this can't be checked
+
+display:
+  fullscreen: true

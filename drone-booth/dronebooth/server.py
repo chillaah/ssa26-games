@@ -1,0 +1,254 @@
+"""Tiny web server the QR code points at: visitor enters name + email, gets their photo.
+
+Standard library only. Photos live in <data_dir>/photos/<id>.jpg, leads in <data_dir>/leads.csv.
+"""
+from __future__ import annotations
+
+import csv
+import html
+import logging
+import re
+import secrets
+import socket
+import threading
+from datetime import datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Optional
+from urllib.parse import parse_qs
+
+import cv2
+import numpy as np
+
+from .config import ShareCfg
+
+log = logging.getLogger(__name__)
+
+PHOTO_ID = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
+EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MAX_BODY = 4096
+
+
+def lan_ip() -> str:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))  # no packets are sent for UDP connect
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+class PhotoStore:
+    def __init__(self, data_dir: str):
+        self.dir = Path(data_dir)
+        self.photos = self.dir / "photos"
+        self.photos.mkdir(parents=True, exist_ok=True)
+        self.leads_path = self.dir / "leads.csv"
+        self._lock = threading.Lock()
+
+    def save(self, photo: np.ndarray) -> str:
+        pid = secrets.token_urlsafe(6)
+        cv2.imwrite(str(self.photos / f"{pid}.jpg"), photo, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        # Blurred teaser shown above the form, so the full photo needs the details.
+        small = cv2.resize(photo, (photo.shape[1] // 4, photo.shape[0] // 4))
+        teaser = cv2.GaussianBlur(small, (0, 0), 6)
+        cv2.imwrite(str(self.photos / f"{pid}_teaser.jpg"), teaser, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        return pid
+
+    def path(self, pid: str, teaser: bool = False) -> Optional[Path]:
+        if not PHOTO_ID.match(pid):
+            return None
+        p = self.photos / (f"{pid}_teaser.jpg" if teaser else f"{pid}.jpg")
+        return p if p.exists() else None
+
+    def add_lead(self, pid: str, name: str, email: str, company: str, marketing: bool) -> None:
+        with self._lock:
+            new = not self.leads_path.exists()
+            with open(self.leads_path, "a", newline="") as fh:
+                w = csv.writer(fh)
+                if new:
+                    w.writerow(["time", "photo_id", "name", "email", "company", "marketing_consent"])
+                w.writerow([datetime.now().isoformat(timespec="seconds"), pid, name, email,
+                            company, int(marketing)])
+
+
+PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caught by Scouts</title>
+<style>
+  :root {{ --red: #eb2828; --bg: #0e0f12; --card: #181a20; --text: #f2f2f2; --muted: #9aa0a6; }}
+  * {{ box-sizing: border-box; }}
+  body {{ margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+  main {{ max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }}
+  .badge {{ display: inline-block; background: var(--red); color: #fff; font-weight: 800;
+           letter-spacing: .08em; padding: 4px 10px; font-size: 13px; }}
+  h1 {{ margin: 10px 0 4px; font-size: 30px; letter-spacing: .02em; }}
+  p {{ color: var(--muted); margin: 6px 0 16px; }}
+  img {{ width: 100%; display: block; border: 2px solid #2a2d35; }}
+  form, .card {{ background: var(--card); padding: 16px; margin-top: 16px; }}
+  label {{ display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }}
+  input[type=text], input[type=email] {{ width: 100%; padding: 12px; font-size: 16px;
+           background: #0e0f12; color: var(--text); border: 1px solid #333842; }}
+  .check {{ display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--muted);
+           font-size: 14px; }}
+  .check input {{ margin-top: 3px; width: 18px; height: 18px; }}
+  button, .btn {{ display: block; width: 100%; margin-top: 16px; padding: 14px; font-size: 17px;
+           font-weight: 700; color: #fff; background: var(--red); border: 0; text-align: center;
+           text-decoration: none; cursor: pointer; }}
+  .btn.secondary {{ background: #2a2d35; }}
+  .err {{ color: #ff7a7a; font-weight: 600; }}
+  small {{ color: var(--muted); display: block; margin-top: 14px; font-size: 12px; }}
+  footer {{ margin-top: 28px; color: var(--muted); font-size: 13px; text-align: center; }}
+  footer a {{ color: var(--text); }}
+</style></head>
+<body><main>
+<span class="badge">THREAT DETECTED</span>
+{body}
+<footer>The Scouts &middot; autonomous drone security &middot; <a href="https://thescouts.io">thescouts.io</a></footer>
+</main></body></html>"""
+
+
+def form_page(pid: str, cfg: ShareCfg, error: str = "", values: Optional[dict] = None) -> str:
+    v = {k: html.escape(x) for k, x in (values or {}).items()}
+    err = f'<p class="err">{html.escape(error)}</p>' if error else ""
+    required = "required" if cfg.require_details else ""
+    heading = ("Enter your details to download your photo." if cfg.require_details
+               else "Your photo is ready. Leave your details to stay in touch.")
+    return PAGE.format(body=f"""
+<h1>Caught by Scouts</h1>
+<p>{heading}</p>
+<img src="/img/{pid}_teaser.jpg" alt="Blurred preview of your photo">
+<form method="post" action="/p/{pid}">
+  {err}
+  <label for="name">Name</label>
+  <input id="name" name="name" type="text" autocomplete="name" maxlength="100" {required}
+         value="{v.get('name', '')}">
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="email" maxlength="200" {required}
+         value="{v.get('email', '')}">
+  <label for="company">Company (optional)</label>
+  <input id="company" name="company" type="text" autocomplete="organization" maxlength="100"
+         value="{v.get('company', '')}">
+  <div class="check"><input id="marketing" name="marketing" type="checkbox" value="1">
+    <label for="marketing" style="margin:0">{html.escape(cfg.marketing_consent_text)}</label></div>
+  <button type="submit">Get my photo</button>
+  <small>{html.escape(cfg.privacy_text)}</small>
+</form>""")
+
+
+def photo_page(pid: str, name: str = "") -> str:
+    hello = f"Thanks, {html.escape(name.split()[0])}!" if name.strip() else "Here you go!"
+    return PAGE.format(body=f"""
+<h1>{hello}</h1>
+<p>Press and hold the photo to save it, or use the buttons below.</p>
+<img src="/img/{pid}.jpg" alt="Your Caught by Scouts photo">
+<button id="share" type="button">Share</button>
+<a class="btn secondary" href="/img/{pid}.jpg" download="caught-by-scouts.jpg">Download</a>
+<script>
+  const btn = document.getElementById('share');
+  btn.addEventListener('click', async () => {{
+    try {{
+      const blob = await (await fetch('/img/{pid}.jpg')).blob();
+      const file = new File([blob], 'caught-by-scouts.jpg', {{ type: 'image/jpeg' }});
+      if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
+        await navigator.share({{ files: [file], title: 'Caught by Scouts',
+                                 text: 'I got caught by The Scouts drone at Safety & Security Asia!' }});
+      }} else {{ window.location = '/img/{pid}.jpg'; }}
+    }} catch (e) {{ /* share sheet dismissed */ }}
+  }});
+</script>""")
+
+
+def message_page(title: str, text: str) -> str:
+    return PAGE.format(body=f"<h1>{html.escape(title)}</h1><p>{html.escape(text)}</p>")
+
+
+def make_handler(store: PhotoStore, cfg: ShareCfg):
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "Dronebooth/1.0"
+
+        def log_message(self, fmt, *args):
+            log.debug("%s %s", self.address_string(), fmt % args)
+
+        def _send(self, code: int, body: bytes, ctype: str = "text/html; charset=utf-8",
+                  cache: bool = False) -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "private, max-age=3600" if cache else "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _html(self, code: int, page: str) -> None:
+            self._send(code, page.encode())
+
+        def do_GET(self):
+            path = self.path.split("?", 1)[0]
+            if path.startswith("/img/") and path.endswith(".jpg"):
+                stem = path[5:-4]
+                teaser = stem.endswith("_teaser")
+                p = store.path(stem[:-7] if teaser else stem, teaser=teaser)
+                if p is None:
+                    return self._html(404, message_page("Not found", "That photo doesn't exist."))
+                return self._send(200, p.read_bytes(), "image/jpeg", cache=True)
+            if path.startswith("/p/"):
+                pid = path[3:].strip("/")
+                if store.path(pid) is None:
+                    return self._html(404, message_page("Photo not found",
+                                                        "Scan the QR code on the booth screen again."))
+                return self._html(200, form_page(pid, cfg))
+            if path == "/":
+                return self._html(200, message_page("Caught by Scouts",
+                                                    "Visit The Scouts booth to get caught by our drone."))
+            self._html(404, message_page("Not found", ""))
+
+        def do_POST(self):
+            path = self.path.split("?", 1)[0]
+            pid = path[3:].strip("/") if path.startswith("/p/") else ""
+            if not pid or store.path(pid) is None:
+                return self._html(404, message_page("Photo not found", ""))
+            length = int(self.headers.get("Content-Length") or 0)
+            if length > MAX_BODY:
+                return self._html(413, message_page("Too much data", ""))
+            form = parse_qs(self.rfile.read(length).decode("utf-8", "replace"))
+            values = {k: (form.get(k, [""])[0]).strip()[:200] for k in ("name", "email", "company")}
+            marketing = form.get("marketing", [""])[0] == "1"
+            name, email = values["name"], values["email"]
+            given = bool(name or email)
+            if cfg.require_details or given:
+                if not name:
+                    return self._html(400, form_page(pid, cfg, "Please enter your name.", values))
+                if not EMAIL.match(email):
+                    return self._html(400, form_page(pid, cfg, "Please enter a valid email.", values))
+                store.add_lead(pid, name, email, values["company"], marketing)
+                log.info("lead captured for photo %s", pid)
+            self._html(200, photo_page(pid, name))
+
+    return Handler
+
+
+class ShareServer:
+    def __init__(self, store: PhotoStore, cfg: ShareCfg):
+        self.cfg = cfg
+        self.httpd = ThreadingHTTPServer((cfg.host, cfg.port), make_handler(store, cfg))
+        self.httpd.daemon_threads = True
+        self.base_url = (cfg.public_base_url.rstrip("/") if cfg.public_base_url
+                         else f"http://{lan_ip()}:{self.httpd.server_address[1]}")
+        self._thread = threading.Thread(target=self.httpd.serve_forever, name="share", daemon=True)
+
+    def start(self) -> "ShareServer":
+        self._thread.start()
+        log.info("Share server at %s", self.base_url)
+        return self
+
+    def url_for(self, pid: str) -> str:
+        return f"{self.base_url}/p/{pid}"
+
+    def stop(self) -> None:
+        self.httpd.shutdown()
+        self.httpd.server_close()

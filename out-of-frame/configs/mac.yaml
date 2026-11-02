@@ -1,0 +1,20 @@
+# Mac + built-in/USB webcam. The gimbal is simulated by a box gliding over the image.
+camera:
+  source: 0
+  width: 1280
+  height: 720
+  mirror: true
+
+framer:
+  mode: virtual
+
+detector:
+  model: yolo11n-seg.pt   # auto-downloads on first run
+  device: mps             # Apple GPU; use "cpu" if MPS gives trouble
+
+game:
+  shots: 5
+  require_player_in_view: true
+
+display:
+  fullscreen: false

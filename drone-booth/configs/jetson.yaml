@@ -1,0 +1,29 @@
+# Caught by Scouts dronebooth on the Jetson Orin Nano 8GB with the SIYI A8 mini.
+camera:
+  # Hardware-decoded RTSP from the A8 mini. If the camera is set to H.265,
+  # swap rtph264depay/h264parse for rtph265depay/h265parse.
+  source: >-
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    rtph264depay ! h264parse ! nvv4l2decoder ! nvvidconv !
+    video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
+    appsink drop=1 max-buffers=1 sync=false
+  mirror: false
+
+detector:
+  # Build once on the Jetson:  yolo export model=yolo11n-seg.pt format=engine half=True imgsz=640
+  model: yolo11n-seg.engine
+  device: "0"
+  half: true
+  conf: 0.45
+
+booth:
+  event: SAFETY & SECURITY ASIA 2026
+  website: thescouts.io
+
+share:
+  port: 8080
+  public_base_url: ""
+  require_details: true
+
+display:
+  fullscreen: true

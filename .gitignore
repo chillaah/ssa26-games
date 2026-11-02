@@ -1,0 +1,24 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Model weights (downloaded/exported on each machine)
+*.pt
+*.engine
+*.onnx
+
+# Captured photos and visitor data, never commit
+out-of-frame/sessions/
+drone-booth/booth_data/
+
+# Local overrides
+.env
+*.local.yaml

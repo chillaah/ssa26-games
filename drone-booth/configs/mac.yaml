@@ -1,0 +1,23 @@
+# Caught by Scouts dronebooth on the Mac with the webcam.
+camera:
+  source: 0
+  width: 1280
+  height: 720
+  mirror: true
+
+detector:
+  model: yolo11n-seg.pt
+  device: mps
+  conf: 0.45              # only label confident detections in the souvenir photo
+
+booth:
+  event: SAFETY & SECURITY ASIA 2026
+  website: thescouts.io
+
+share:
+  port: 8080
+  public_base_url: ""     # empty = http://<this Mac's Wi-Fi IP>:8080
+  require_details: true
+
+display:
+  fullscreen: false

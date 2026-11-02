@@ -1,0 +1,44 @@
+# Jetson Orin Nano 8GB + SIYI A8 mini on the drone.
+# The gimbal physically swings to random angles; the photo is the camera image.
+camera:
+  # Hardware-decoded RTSP from the A8 mini. If the camera is set to H.265,
+  # swap rtph264depay/h264parse for rtph265depay/h265parse.
+  source: >-
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    rtph264depay ! h264parse ! nvv4l2decoder ! nvvidconv !
+    video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
+    appsink drop=1 max-buffers=1 sync=false
+  mirror: false
+
+framer:
+  mode: siyi
+  siyi:
+    # Gimbal control: "udp" over Ethernet, or "serial" over the TTL UART cable.
+    # Video still needs the camera's Ethernet connection either way.
+    link: udp
+    ip: 192.168.144.25
+    port: 37260
+    serial_port: /dev/ttyTHS0   # 40-pin header pins 8/10; a USB-serial adapter is /dev/ttyUSB0
+    baud: 115200
+    # Play area as gimbal angles. Calibrate at the booth so the extremes
+    # still cover the floor where visitors stand.
+    yaw_min: -50
+    yaw_max: 50
+    pitch_min: -45
+    pitch_max: -5
+    home_yaw: 0
+    home_pitch: -20
+    photo_box_frac: 0.8   # the photo is the centre 80% of the image, drawn as the box
+
+detector:
+  # Build once on the Jetson:  yolo export model=yolo11n-seg.pt format=engine half=True imgsz=640
+  model: yolo11n-seg.engine
+  device: "0"
+  half: true
+
+game:
+  shots: 5
+  require_player_in_view: false   # the photo is the whole view, so this can't be checked
+
+display:
+  fullscreen: true

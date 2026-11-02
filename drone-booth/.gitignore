@@ -1,0 +1,6 @@
+.venv/
+booth_data/
+__pycache__/
+*.pt
+*.engine
+.pytest_cache/

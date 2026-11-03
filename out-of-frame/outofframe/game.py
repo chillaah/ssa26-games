@@ -52,6 +52,7 @@ class Game:
         self.poser = poser if gallery is not None and gallery.items else None
         self.gallery = gallery
         self.match: Optional[PoseMatch] = None
+        self.used_pictures = set()  # each gallery picture at most once per game
         self._gallery_imgs = {}
         self.rng = rng or random.Random()
         self.state = ATTRACT
@@ -85,6 +86,7 @@ class Game:
         self.shots = []
         self.win_code = ""
         self.match = None
+        self.used_pictures = set()
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.session_dir = Path(self.cfg.game.save_dir) / stamp
         self._set(GET_READY, now)
@@ -187,11 +189,13 @@ class Game:
         pose = self.poser.player(frame)
         if pose is None or visible_limbs(pose, self.cfg.pose.conf) < self.cfg.pose.min_limbs:
             return None
-        item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf)
+        item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf, self.used_pictures,
+                                                  self.rng, self.cfg.pose.tie)
         log.info("shot %d: pose match %s (%.2f%s)", len(self.shots), item.path.name if item else "-",
                  score, ", mirrored" if mirrored else "")
         if item is None or score < self.cfg.pose.min_score:
             return None
+        self.used_pictures.add(item.path)
         return PoseMatch(item, score, mirrored, pose, frame)
 
     def _gallery_image(self, item: GalleryItem) -> Optional[np.ndarray]:

@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -123,7 +124,8 @@ class GalleryItem:
 
     @property
     def name(self) -> str:
-        return self.path.stem.replace("__", " + ").replace("_", " ").replace("-", " ").upper()
+        stem = re.sub(r"_\d+$", "", self.path.stem)  # kung_fu_3 -> KUNG FU
+        return stem.replace("__", " + ").replace("_", " ").replace("-", " ").upper()
 
 
 class PoseEstimator:
@@ -195,17 +197,25 @@ class Gallery:
         log.info("Gallery: %d usable images in %s", len(items), folder)
         return cls(folder, items)
 
-    def best(self, pose: Pose, min_conf: float = 0.3) -> Tuple[Optional[GalleryItem], float, bool]:
-        """(item, score, mirrored) for the closest gallery pose."""
-        best, best_s, best_m = None, -1.0, False
+    def best(self, pose: Pose, min_conf: float = 0.3, exclude=(), rng=None,
+             tie: float = 0.0) -> Tuple[Optional[GalleryItem], float, bool]:
+        """(item, score, mirrored) for the closest gallery pose, skipping paths in `exclude`.
+        With an rng, picks at random among matches within `tie` of the best, for variety."""
         mk, mc = mirror(pose.kpts, pose.conf)
         flipped = Pose(mk, mc, pose.bbox)
+        scored = []
         for item in self.items:
-            for p, m in ((pose, False), (flipped, True)):
-                s = similarity(p, item.pose, min_conf)
-                if s > best_s:
-                    best, best_s, best_m = item, s, m
-        return best, best_s, best_m
+            if item.path in exclude:
+                continue
+            s, m = max((similarity(pose, item.pose, min_conf), False),
+                       (similarity(flipped, item.pose, min_conf), True))
+            scored.append((s, m, item))
+        if not scored:
+            return None, -1.0, False
+        top = max(scored, key=lambda x: x[0])
+        if rng is not None and tie > 0:
+            top = rng.choice([x for x in scored if x[0] >= top[0] - tie])
+        return top[2], top[0], top[1]
 
 
 def draw_skeleton(img: np.ndarray, pose: Pose, color=(0, 255, 255), thickness: int = 4,

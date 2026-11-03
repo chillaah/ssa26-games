@@ -35,8 +35,9 @@ view, the photo is stamped **MISS** and still counts as a loss.
 ## Pose match
 
 After each snap, the game finds the player's pose and shows the `gallery/` picture that matches it best
-("POSE MATCH!"). The bundled gallery is 162 pictograms made by `tools/make_pictograms.py`
-(arm × leg combinations); add your own images alongside them or replace them.
+("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 86 public-domain / CC0 photos
+from Wikimedia Commons (athletes, dancers, statues, clowns, animals); see `gallery/CREDITS.md`.
+Each picture is shown at most once per game.
 
 - Drop images (`.jpg`/`.png`) into `gallery/`. Poses are read automatically on the next start and cached in
   `gallery/index.json`. Images with no person found are skipped.

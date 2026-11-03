@@ -238,33 +238,60 @@ def test_steady_view_cancels_gimbal_shift():
             assert abs(dx) < 2 and abs(dy) < 2, (mirror, dyaw, dpitch, dx, dy)
 
 
-def test_pose_similarity_and_gallery_pick():
+def _pose_kpts(**over):
+    """COCO-17 keypoints of a standing figure, with some joints moved."""
+    k = {0: (300, 150), 5: (350, 235), 6: (250, 235), 7: (372, 330), 8: (228, 330), 9: (378, 420),
+         10: (222, 420), 11: (330, 420), 12: (270, 420), 13: (335, 560), 14: (265, 560),
+         15: (340, 700), 16: (260, 700)}
+    k.update({int(i[1:]): v for i, v in over.items()})
+    return np.array([k.get(i, (0, 0)) for i in range(17)], float), \
+        np.array([1.0 if i in k else 0.0 for i in range(17)])
+
+
+POSES = {
+    "t_pose": dict(j7=(445, 235), j8=(155, 235), j9=(540, 235), j10=(60, 235)),
+    "hands_up": dict(j7=(385, 140), j8=(215, 140), j9=(395, 45), j10=(205, 45)),
+    "star_jump": dict(j7=(430, 150), j8=(170, 150), j9=(505, 70), j10=(95, 70), j13=(395, 555),
+                      j14=(205, 555), j15=(455, 690), j16=(145, 690)),
+    "squat": dict(j11=(340, 500), j12=(260, 500), j13=(440, 560), j14=(160, 560), j15=(410, 700),
+                  j16=(190, 700)),
+    "disco": dict(j8=(215, 140), j10=(170, 45), j7=(420, 330), j9=(345, 410)),
+}
+
+
+def test_pose_similarity_and_gallery_pick(tmp_path):
     import json
-    from pathlib import Path
+
+    import cv2
 
     from outofframe.pose import Gallery, Pose, mirror, similarity
 
-    index = json.loads(Path("gallery/index.json").read_text())
+    index = {}
+    for name, over in POSES.items():
+        k, c = _pose_kpts(**over)
+        cv2.imwrite(str(tmp_path / f"{name}.png"), np.zeros((8, 8, 3), np.uint8))
+        index[f"{name}.png"] = {"manual": True, "kpts": k.tolist(), "conf": c.tolist(),
+                                "bbox": [0, 0, 600, 800]}
+    (tmp_path / "index.json").write_text(json.dumps(index))
 
     def pose(name):
-        e = index[name]
-        return Pose(np.array(e["kpts"], float), np.array(e["conf"], float), tuple(e["bbox"]))
+        return Pose(*_pose_kpts(**POSES[name]), (0, 0, 600, 800))
 
-    t, up = pose("t_pose.png"), pose("hands_up.png")
+    t, up = pose("t_pose"), pose("hands_up")
     assert similarity(t, t) > 0.99
     assert similarity(t, up) < 0.8
-    # Same pose, shifted and twice as big, still matches.
-    big = Pose(t.kpts * 2 + 100, t.conf, t.bbox)
-    assert similarity(t, big) > 0.99
+    assert similarity(t, Pose(t.kpts * 2 + 100, t.conf, t.bbox)) > 0.99  # position/size don't matter
 
-    gallery = Gallery.load("gallery", None)
-    assert len(gallery.items) == len(index)
-    for name in ("star_jump.png", "squat.png", "disco.png"):
+    gallery = Gallery.load(tmp_path, None)
+    assert len(gallery.items) == len(POSES)
+    for name in ("star_jump", "squat", "disco"):
         p = pose(name)
         noisy = Pose(p.kpts + np.random.default_rng(0).normal(0, 6, p.kpts.shape), p.conf, p.bbox)
         item, score, _ = gallery.best(noisy)
-        assert item.path.name == name and score > 0.9
-    # A mirrored pose matches its gallery picture via the flip.
-    d = pose("disco.png")
+        assert item.path.stem == name and score > 0.9
+    d = pose("disco")
     item, _, mirrored = gallery.best(Pose(*mirror(d.kpts, d.conf), d.bbox))
-    assert item.path.name == "disco.png" and mirrored
+    assert item.path.stem == "disco" and mirrored
+    # Excluded pictures are never picked again.
+    item, _, _ = gallery.best(d, exclude={gallery.folder / "disco.png"})
+    assert item.path.stem != "disco"

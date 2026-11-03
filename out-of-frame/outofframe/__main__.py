@@ -12,6 +12,7 @@ from .config import load_config
 from .detector import PersonDetector
 from .framer import FollowingFramer, make_framer
 from .game import Game
+from .pose import Gallery, PoseEstimator
 
 
 def main() -> None:
@@ -41,7 +42,13 @@ def main() -> None:
         steady = SteadyView(framer.gimbal, cfg.framer.virtual,
                             (cfg.framer.siyi.home_yaw, cfg.framer.siyi.home_pitch), cfg.camera.mirror)
         steady.calibrate()
-    game = Game(cfg, framer, detector)
+    poser = gallery = None
+    if cfg.pose.enabled:
+        poser = PoseEstimator(cfg.pose, cfg.detector.device, cfg.detector.half)
+        gallery = Gallery.load(cfg.pose.gallery_dir, poser)
+        if not gallery.items:
+            logging.warning("Pose match off: no usable images in %s", cfg.pose.gallery_dir)
+    game = Game(cfg, framer, detector, poser=poser, gallery=gallery)
 
     win = cfg.display.window_name
     cv2.namedWindow(win, cv2.WINDOW_NORMAL)

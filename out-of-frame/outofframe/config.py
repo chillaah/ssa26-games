@@ -87,6 +87,18 @@ class DetectorCfg:
 
 
 @dataclass
+class PoseCfg:
+    # After each snap, show the gallery image whose pose best matches the player's.
+    # Turns itself off if the gallery folder has no usable images.
+    enabled: bool = True
+    model: str = "yolo11n-pose.pt"
+    conf: float = 0.30
+    gallery_dir: str = "gallery"
+    show_s: float = 1.6  # how long the match is on screen
+    min_score: float = 0.45  # 0..1; below this no match is shown
+
+
+@dataclass
 class GameCfg:
     shots: int = 5
     get_ready_s: float = 3.0
@@ -121,6 +133,7 @@ class Config:
     camera: CameraCfg = field(default_factory=CameraCfg)
     framer: FramerCfg = field(default_factory=FramerCfg)
     detector: DetectorCfg = field(default_factory=DetectorCfg)
+    pose: PoseCfg = field(default_factory=PoseCfg)
     game: GameCfg = field(default_factory=GameCfg)
     display: DisplayCfg = field(default_factory=DisplayCfg)
 

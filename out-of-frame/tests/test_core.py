@@ -236,3 +236,35 @@ def test_steady_view_cancels_gimbal_shift():
         for dyaw, dpitch in [(5, 0), (-4, 3), (0, -3.5)]:
             (dx, dy), _ = cv2.phaseCorrelate(still, steadied(dyaw, dpitch, mirror))
             assert abs(dx) < 2 and abs(dy) < 2, (mirror, dyaw, dpitch, dx, dy)
+
+
+def test_pose_similarity_and_gallery_pick():
+    import json
+    from pathlib import Path
+
+    from outofframe.pose import Gallery, Pose, mirror, similarity
+
+    index = json.loads(Path("gallery/index.json").read_text())
+
+    def pose(name):
+        e = index[name]
+        return Pose(np.array(e["kpts"], float), np.array(e["conf"], float), tuple(e["bbox"]))
+
+    t, up = pose("t_pose.png"), pose("hands_up.png")
+    assert similarity(t, t) > 0.99
+    assert similarity(t, up) < 0.8
+    # Same pose, shifted and twice as big, still matches.
+    big = Pose(t.kpts * 2 + 100, t.conf, t.bbox)
+    assert similarity(t, big) > 0.99
+
+    gallery = Gallery.load("gallery", None)
+    assert len(gallery.items) == len(index)
+    for name in ("star_jump.png", "squat.png", "disco.png"):
+        p = pose(name)
+        noisy = Pose(p.kpts + np.random.default_rng(0).normal(0, 6, p.kpts.shape), p.conf, p.bbox)
+        item, score, _ = gallery.best(noisy)
+        assert item.path.name == name and score > 0.9
+    # A mirrored pose matches its gallery picture via the flip.
+    d = pose("disco.png")
+    item, _, mirrored = gallery.best(Pose(*mirror(d.kpts, d.conf), d.bbox))
+    assert item.path.name == "disco.png" and mirrored

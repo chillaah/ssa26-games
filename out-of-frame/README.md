@@ -20,6 +20,7 @@ Two ways to run it, sharing the same code:
 3. **5 photos.** For each one, the frame moves through 1–3 random waypoints ("feints").
    Then it **locks on**: the box goes yellow, then flashes red, with a progress bar.
    Then it **snaps**. Every round gets faster and the box gets bigger.
+   After each snap, a **pose match** picture is shown (see below).
 4. **Developing photos.** The photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
 5. **Result.** A win shows a 4-character prize code. Every game is logged to `sessions/results.csv`,
    so staff can check codes. Each session folder also holds the raw, judged and full-frame images.
@@ -30,6 +31,18 @@ A person counts as caught when their segmentation mask covers at least `min_body
 In **virtual mode** the wide view is visible, so a player must also be in view at every snap
 (`require_player_in_view`). Otherwise walking off camera would be an easy win. If nobody is in
 view, the photo is stamped **MISS** and still counts as a loss.
+
+## Pose match
+
+After each snap, the game finds the player's pose and shows the `gallery/` picture that matches it best
+("POSE MATCH!"). The bundled gallery is simple pictograms; replace or add your own images.
+
+- Drop images (`.jpg`/`.png`) into `gallery/`. Poses are read automatically on the next start and cached in
+  `gallery/index.json`. Images with no person found are skipped.
+- For a picture the pose model can't read (an animal, a letter), write its keypoints into `index.json`
+  by hand with `"manual": true`.
+- Check a photo against the gallery: `python -m outofframe.pose --test photo.jpg`
+- Settings: `pose.show_s` (time on screen), `pose.min_score` (weakest match still shown), `pose.enabled`.
 
 ## Run on the Mac
 

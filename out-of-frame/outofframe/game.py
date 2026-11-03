@@ -18,11 +18,21 @@ from . import render as R
 from .config import Config
 from .detector import PersonDetector, ShotVerdict, judge, union_mask
 from .framer import Box, Framer, lerp, difficulty
+from .pose import Gallery, GalleryItem, Pose, PoseEstimator, draw_skeleton
 
 log = logging.getLogger(__name__)
 
-ATTRACT, GET_READY, MOVING, LOCKING, FLASH, REVEAL, RESULTS = (
-    "attract", "get_ready", "moving", "locking", "flash", "reveal", "results")
+ATTRACT, GET_READY, MOVING, LOCKING, FLASH, POSE, REVEAL, RESULTS = (
+    "attract", "get_ready", "moving", "locking", "flash", "pose", "reveal", "results")
+
+
+@dataclass
+class PoseMatch:
+    item: GalleryItem
+    score: float
+    mirrored: bool  # the gallery image is shown flipped so it faces the same way as the player
+    pose: Pose
+    frame: np.ndarray  # full frame at the snap
 
 
 @dataclass
@@ -34,10 +44,15 @@ class Shot:
 
 class Game:
     def __init__(self, cfg: Config, framer: Framer, detector: PersonDetector,
-                 rng: Optional[random.Random] = None):
+                 rng: Optional[random.Random] = None, poser: Optional[PoseEstimator] = None,
+                 gallery: Optional[Gallery] = None):
         self.cfg = cfg
         self.framer = framer
         self.detector = detector
+        self.poser = poser if gallery is not None and gallery.items else None
+        self.gallery = gallery
+        self.match: Optional[PoseMatch] = None
+        self._gallery_imgs = {}
         self.rng = rng or random.Random()
         self.state = ATTRACT
         self.state_t = 0.0
@@ -69,6 +84,7 @@ class Game:
         self.round = 0
         self.shots = []
         self.win_code = ""
+        self.match = None
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.session_dir = Path(self.cfg.game.save_dir) / stamp
         self._set(GET_READY, now)
@@ -107,12 +123,13 @@ class Game:
                 self._set(FLASH, now)
         elif self.state == FLASH:
             if dt >= g.flash_s:
-                self.round += 1
-                if self.round < g.shots:
-                    self._begin_round(now, size)
+                if self.match is not None:
+                    self._set(POSE, now)
                 else:
-                    self._finish()
-                    self._set(REVEAL, now)
+                    self._next_round(now, size)
+        elif self.state == POSE:
+            if dt >= self.cfg.pose.show_s:
+                self._next_round(now, size)
         elif self.state == REVEAL:
             if dt >= g.reveal_per_shot_s * (len(self.shots) + 1):
                 self._set(RESULTS, now)
@@ -125,6 +142,14 @@ class Game:
 
         self._draw(canvas, frame, now, now - self.state_t)
         return canvas
+
+    def _next_round(self, now: float, size: Tuple[int, int]) -> None:
+        self.round += 1
+        if self.round < self.cfg.game.shots:
+            self._begin_round(now, size)
+        else:
+            self._finish()
+            self._set(REVEAL, now)
 
     def _begin_round(self, now: float, size: Tuple[int, int]) -> None:
         g = self.cfg.game
@@ -154,6 +179,25 @@ class Game:
             cv2.imwrite(str(self.session_dir / f"shot{n}.jpg"), photo)
             cv2.imwrite(str(self.session_dir / f"shot{n}_judged.jpg"), annotated)
             cv2.imwrite(str(self.session_dir / f"shot{n}_full.jpg"), frame)
+        self.match = self._match_pose(frame)
+
+    def _match_pose(self, frame: np.ndarray) -> Optional[PoseMatch]:
+        if self.poser is None:
+            return None
+        pose = self.poser.player(frame)
+        if pose is None:
+            return None
+        item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf)
+        log.info("shot %d: pose match %s (%.2f%s)", len(self.shots), item.path.name if item else "-",
+                 score, ", mirrored" if mirrored else "")
+        if item is None or score < self.cfg.pose.min_score:
+            return None
+        return PoseMatch(item, score, mirrored, pose, frame)
+
+    def _gallery_image(self, item: GalleryItem) -> Optional[np.ndarray]:
+        if item.path not in self._gallery_imgs:
+            self._gallery_imgs[item.path] = cv2.imread(str(item.path))
+        return self._gallery_imgs[item.path]
 
     @property
     def won(self) -> bool:
@@ -181,6 +225,9 @@ class Game:
     def _draw(self, canvas: np.ndarray, frame: np.ndarray, now: float, dt: float) -> None:
         if self.state in (REVEAL, RESULTS):
             self._draw_results(canvas, now, dt)
+            return
+        if self.state == POSE:
+            self._draw_pose(canvas, dt)
             return
 
         d = self.cfg.display
@@ -232,6 +279,32 @@ class Game:
                 R.text(canvas, "SNAP!", (cx, H // 2), 5.0, R.BLACK, 12, font=R.FONT_BOLD,
                        shadow=False)
             self._draw_hud(canvas)
+
+    def _draw_pose(self, canvas: np.ndarray, dt: float) -> None:
+        """The player (with their skeleton) next to the gallery picture that matches their pose."""
+        d = self.cfg.display
+        W, H = d.width, d.height
+        m = self.match
+        canvas[:] = (25, 22, 20)
+        # The player, cropped around them with some room.
+        x1, y1, x2, y2 = m.pose.bbox
+        fh, fw = m.frame.shape[:2]
+        pad = int(0.15 * max(x2 - x1, y2 - y1))
+        cx1, cy1, cx2, cy2 = max(x1 - pad, 0), max(y1 - pad, 0), min(x2 + pad, fw), min(y2 + pad, fh)
+        crop = m.frame[cy1:cy2, cx1:cx2].copy()
+        shifted = Pose(m.pose.kpts - (cx1, cy1), m.pose.conf, m.pose.bbox)
+        draw_skeleton(crop, shifted, d.accent, max(2, crop.shape[0] // 120), self.cfg.pose.conf)
+        top = int(H * 0.2)
+        R.card(canvas, crop, (60, top, W // 2 - 30, H - 50), "YOU", R.WHITE)
+        pic = self._gallery_image(m.item)
+        if pic is not None:
+            if m.mirrored:
+                pic = cv2.flip(pic, 1)
+            R.card(canvas, pic, (W // 2 + 30, top, W - 60, H - 50), m.item.name, d.accent)
+        pop = min(1.0, dt / 0.25)
+        R.text(canvas, "POSE MATCH!", (W // 2, int(H * 0.1)), 2.4 + 0.8 * (1 - pop), d.accent, 7,
+               font=R.FONT_BOLD)
+        R.text(canvas, f"{round(m.score * 100)}% match", (W // 2, int(H * 0.16)), 1.2, R.WHITE, 2)
 
     def _draw_hud(self, canvas: np.ndarray) -> None:
         d = self.cfg.display

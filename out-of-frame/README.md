@@ -20,16 +20,16 @@ Two ways to run it, sharing the same code:
 3. **5 photos.** For each one, the frame moves through 1–3 random waypoints ("feints").
    Then it **locks on**: the box goes yellow, then flashes red, with a progress bar.
    Then it **snaps**. Every round gets faster and the box gets bigger.
-4. **Developing photos.** The photos are revealed one at a time, each marked CLEAR or CAUGHT.
+4. **Developing photos.** The photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
 5. **Result.** A win shows a 4-character prize code. Every game is logged to `sessions/results.csv`,
    so staff can check codes. Each session folder also holds the raw, judged and full-frame images.
 
 A person counts as caught when their segmentation mask covers at least `min_body_frac`
 (0.1%) of the photo, or `min_body_px` pixels, whichever is larger. So even a hand or an elbow counts.
 
-In **virtual mode** the wide webcam view is visible, so the game also requires a player to
-be in view at every snap (`require_player_in_view`). Without this, walking off camera would
-be an easy win. That case is marked "LEFT THE ARENA".
+In **virtual mode** the wide view is visible, so a player must also be in view at every snap
+(`require_player_in_view`). Otherwise walking off camera would be an easy win. If nobody is in
+view, the photo is stamped **MISS** and still counts as a loss.
 
 ## Run on the Mac
 
@@ -88,6 +88,20 @@ Gimbal control uses the same cable (UDP 37260). Calibrate the yaw/pitch play are
    ```bash
    python3 -m outofframe --config configs/jetson.yaml
    ```
+
+Jetson configs:
+
+| Config | Gimbal | Screen |
+|---|---|---|
+| `jetson.yaml` | Swings to random angles; the whole image is the photo | Moves with the gimbal |
+| `jetson_table.yaml` | Same, tuned for a camera on a desk | Moves with the gimbal |
+| `jetson_virtual.yaml` | Holds still; a box glides over the view | Fixed |
+| `jetson_follow.yaml` | Leans a few degrees toward the gliding box (for show only) | Moves slightly with the gimbal |
+| `jetson_steady.yaml` | Same as follow | Held still by shifting each frame back (slight zoom, ~85% of the view) |
+
+In the follow and steady configs, set the lean with `follow_yaw_deg` / `follow_pitch_deg`. If the camera turns
+away from the box, flip `follow_invert_yaw` / `follow_invert_pitch`. If the steady picture jumps
+when the gimbal moves, adjust `steady_latency_s`.
 
 The A8 mini streams H.265 by default (even on the `main.264` path), so the pipeline uses
 `rtph265depay ! h265parse`. If the camera is switched to H.264, change it to `rtph264depay ! h264parse`.

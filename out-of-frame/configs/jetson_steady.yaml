@@ -1,0 +1,46 @@
+# Jetson + SIYI A8 mini: like jetson_follow.yaml (the gimbal leans toward the gliding box), but
+# each frame is shifted back by the gimbal's movement so the on-screen view stays still.
+camera:
+  # Hardware-decoded RTSP from the A8 mini. It streams H.265 even though the path is "main.264";
+  # if it is switched to H.264, swap rtph265depay/h265parse for rtph264depay/h264parse.
+  source: >-
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    rtph265depay ! h265parse ! nvv4l2decoder ! nvvidconv !
+    video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
+    appsink drop=1 max-buffers=1 sync=false
+  mirror: true   # players see themselves like a mirror
+
+framer:
+  mode: virtual
+  virtual:
+    box_width_frac: 0.45         # round 1
+    box_width_frac_final: 0.50   # box grows each round -> harder
+    follow_gimbal: true
+    follow_yaw_deg: 6            # lean when the box reaches the left/right edge
+    follow_pitch_deg: 4          # lean when the box reaches the top/bottom edge
+    # Measured on the A8 mini in upside-down mode: +yaw turns the camera toward the right of its
+    # (unmirrored) image and +pitch aims it lower, so both axes are flipped here.
+    follow_invert_yaw: true
+    follow_invert_pitch: true
+    steady_view: true            # shift each frame back so the view looks still (slight zoom)
+    steady_latency_s: 0.075      # measured best 0.05-0.1 s; raise/lower if the picture lags/leads
+  siyi:
+    link: udp
+    ip: 192.168.144.25
+    port: 37260
+    # Resting aim; the lean is added on top. 0/0 is the gimbal's centre position.
+    home_yaw: 0
+    home_pitch: 0
+
+detector:
+  # Build once on the Jetson:  yolo export model=yolo11n-seg.pt format=engine half=True imgsz=640
+  model: yolo11n-seg.engine
+  device: "0"
+  half: true
+
+game:
+  shots: 5
+  require_player_in_view: true   # walking off camera doesn't count as a dodge
+
+display:
+  fullscreen: true

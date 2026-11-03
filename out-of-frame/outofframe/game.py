@@ -274,7 +274,9 @@ class Game:
                          f"#{i + 1}  {v.people_in_box} CAUGHT" if v.caught else f"#{i + 1}  CLEAR")
                 img_rect = R.card(canvas, shot.annotated, rect, label, border)
                 cxy = ((img_rect[0] + img_rect[2]) // 2, (img_rect[1] + img_rect[3]) // 2)
-                R.stamp(canvas, "CAUGHT" if v.caught else "CLEAR", border, cxy,
+                # Nobody in view still counts as a loss, but it wasn't really a catch.
+                word = "MISS" if v.no_player else "CAUGHT" if v.caught else "CLEAR"
+                R.stamp(canvas, word, border, cxy,
                         max(0.8, (img_rect[2] - img_rect[0]) / 260))
             else:
                 R.card(canvas, None, rect, f"#{i + 1}  ?")

@@ -1,7 +1,8 @@
 """Where is the camera "looking"? Two implementations behind one interface.
 
-VirtualFramer: a photo box glides around a fixed webcam image (Mac testing).
-SiyiFramer:    the SIYI A8 mini gimbal physically swings to random angles (drone).
+VirtualFramer:   a photo box glides around a fixed webcam image (Mac testing).
+FollowingFramer: the same gliding box, while the SIYI gimbal leans a little toward it (show only).
+SiyiFramer:      the SIYI A8 mini gimbal physically swings to random angles (drone).
 
 Both only handle movement. The game decides when to lock on and snap.
 """
@@ -113,19 +114,75 @@ class VirtualFramer(Framer):
         return self._box(size)
 
 
+def open_gimbal(cfg: SiyiFramerCfg):
+    from .siyi import SerialLink, SiyiGimbal, UdpLink
+
+    if cfg.link == "serial":
+        link = SerialLink(cfg.serial_port, cfg.baud)
+    elif cfg.link == "udp":
+        link = UdpLink(cfg.ip, cfg.port)
+    else:
+        raise ValueError(f"Unknown SIYI link: {cfg.link}")
+    return SiyiGimbal(link).start()
+
+
+class FollowingFramer(VirtualFramer):
+    """VirtualFramer whose box also nudges the real gimbal. The game logic doesn't change:
+    the box still decides who is caught; the gimbal lean is just for show."""
+
+    def __init__(self, cfg: VirtualFramerCfg, siyi: SiyiFramerCfg, mirror: bool,
+                 rng: Optional[random.Random] = None, gimbal=None):
+        super().__init__(cfg, rng)
+        self.siyi = siyi
+        # Mirrored display: the box on the right of the screen is on the left of the camera image.
+        self.yaw_sign = (1 if mirror else -1) * (-1 if cfg.follow_invert_yaw else 1)
+        self.pitch_sign = -1 if cfg.follow_invert_pitch else 1
+        self.gimbal = gimbal or open_gimbal(siyi)
+        self.sent: Optional[Tuple[float, float]] = None
+        self.sent_t = -math.inf
+
+    def lean(self) -> Tuple[float, float]:
+        """Gimbal angles for the current box centre: home, plus up to follow_*_deg toward the box."""
+        x0, x1, y0, y1 = self._limits()
+        u = max(-1.0, min(1.0, (self.center[0] - 0.5) / max(0.5 - x0, 1e-6)))  # -1 left .. +1 right
+        v = max(-1.0, min(1.0, (self.center[1] - 0.5) / max(0.5 - y0, 1e-6)))  # -1 top .. +1 bottom
+        return (self.siyi.home_yaw + self.yaw_sign * u * self.cfg.follow_yaw_deg,
+                self.siyi.home_pitch - self.pitch_sign * v * self.cfg.follow_pitch_deg)
+
+    def _follow(self, now: float) -> None:
+        if now - self.sent_t < 1.0 / self.cfg.follow_hz:
+            return
+        target = self.lean()
+        if self.sent is not None and math.dist(target, self.sent) < 0.2:
+            return
+        try:
+            self.gimbal.set_angles(*target)
+        except OSError as exc:
+            log.warning("SIYI send failed: %s", exc)
+        self.sent, self.sent_t = target, now
+
+    def update(self, now: float, size: Size) -> Tuple[Box, bool]:
+        result = super().update(now, size)
+        self._follow(now)
+        return result
+
+    def idle(self, now: float, size: Size) -> Box:
+        box = super().idle(now, size)
+        self._follow(now)
+        return box
+
+    def close(self) -> None:
+        try:
+            self.gimbal.center()
+        finally:
+            self.gimbal.stop()
+
+
 class SiyiFramer(Framer):
     def __init__(self, cfg: SiyiFramerCfg, rng: Optional[random.Random] = None):
-        from .siyi import SerialLink, SiyiGimbal, UdpLink
-
         self.cfg = cfg
         self.rng = rng or random.Random()
-        if cfg.link == "serial":
-            link = SerialLink(cfg.serial_port, cfg.baud)
-        elif cfg.link == "udp":
-            link = UdpLink(cfg.ip, cfg.port)
-        else:
-            raise ValueError(f"Unknown SIYI link: {cfg.link}")
-        self.gimbal = SiyiGimbal(link).start()
+        self.gimbal = open_gimbal(cfg)
         self.targets: List[Tuple[float, float]] = []
         self.target_idx = 0
         self.target_sent_t = 0.0
@@ -203,8 +260,10 @@ class SiyiFramer(Framer):
             self.gimbal.stop()
 
 
-def make_framer(cfg: FramerCfg) -> Framer:
+def make_framer(cfg: FramerCfg, mirror: bool = False) -> Framer:
     if cfg.mode == "virtual":
+        if cfg.virtual.follow_gimbal:
+            return FollowingFramer(cfg.virtual, cfg.siyi, mirror)
         return VirtualFramer(cfg.virtual)
     if cfg.mode == "siyi":
         return SiyiFramer(cfg.siyi)

@@ -30,6 +30,20 @@ class VirtualFramerCfg:
     min_jump_frac: float = 0.30  # each waypoint must be at least this far from the last
     feints_min: int = 1
     feints_max: int = 3
+    # Optional: the real SIYI gimbal leans a little toward the box while the game itself is
+    # unchanged. Link settings and the resting angle (home_yaw/home_pitch) come from framer.siyi.
+    follow_gimbal: bool = False
+    follow_yaw_deg: float = 6.0  # lean when the box is as far left/right as it can go
+    follow_pitch_deg: float = 4.0  # lean when the box is as far up/down as it can go
+    follow_hz: float = 10.0  # max angle commands per second
+    follow_invert_yaw: bool = False  # flip if the camera leans away from the box
+    follow_invert_pitch: bool = False
+    # With follow_gimbal: shift each frame back by the gimbal's movement so the view looks still.
+    # Costs a slight zoom (the edges the camera can't always see are cropped).
+    steady_view: bool = False
+    steady_px_per_deg: float = 13.6  # image shift per degree at 1280 px wide (measured, A8 mini)
+    steady_latency_s: float = 0.075  # video lags the attitude readings by about this much (measured)
+    steady_margin_deg: float = 0.5  # extra crop beyond the lean, for overshoot
 
 
 @dataclass

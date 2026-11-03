@@ -10,7 +10,7 @@ import cv2
 from .camera import Camera
 from .config import load_config
 from .detector import PersonDetector
-from .framer import make_framer
+from .framer import FollowingFramer, make_framer
 from .game import Game
 
 
@@ -33,7 +33,14 @@ def main() -> None:
     detector = PersonDetector(cfg.detector)
     detector.warmup()
     camera = Camera(cfg.camera).start()
-    framer = make_framer(cfg.framer)
+    framer = make_framer(cfg.framer, cfg.camera.mirror)
+    steady = None
+    if isinstance(framer, FollowingFramer) and cfg.framer.virtual.steady_view:
+        from .steady import SteadyView
+
+        steady = SteadyView(framer.gimbal, cfg.framer.virtual,
+                            (cfg.framer.siyi.home_yaw, cfg.framer.siyi.home_pitch), cfg.camera.mirror)
+        steady.calibrate()
     game = Game(cfg, framer, detector)
 
     win = cfg.display.window_name
@@ -46,7 +53,9 @@ def main() -> None:
 
     try:
         while not game.quit:
-            frame, _ = camera.read()
+            frame, frame_t = camera.read()
+            if steady is not None and frame is not None:
+                frame = steady.apply(frame, frame_t)
             now = time.monotonic()
             cv2.imshow(win, game.step(now, frame))
             key = cv2.waitKey(1) & 0xFF

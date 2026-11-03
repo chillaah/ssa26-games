@@ -17,7 +17,7 @@ pip install -r requirements.txt
 python -m outofframe --config configs/mac.yaml   # drone-booth: python -m dronebooth --config configs/mac.yaml
 ```
 
-Each project's README covers configs (`mac`, `mac_siyi`, `jetson`), SIYI A8 mini wiring and tuning.
+Each project's README covers its configs (`mac`, `mac_siyi`, `jetson*`), SIYI A8 mini wiring and tuning.
 
 Model weights (`*.pt`), captured sessions and visitor data are not tracked in git.
 

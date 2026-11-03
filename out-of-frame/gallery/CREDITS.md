@@ -90,3 +90,85 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | pirate_costume_1.jpg | Pirate (209099505).jpeg | 
 João Cautela | CC0 | https://commons.wikimedia.org/wiki/File:Pirate_(209099505).jpeg |
 | hurdles_1.jpg | Antonio Siddi hurdles.jpg | Unknown photographer | Public domain | https://commons.wikimedia.org/wiki/File:Antonio_Siddi_hurdles.jpg |
+| boxing_kangaroo_1.jpg | Trained Boxer Tussles With Trained Kangaroo (Dorgan) (cropped).jpg | Tad Dorgan | Public domain | https://commons.wikimedia.org/wiki/File:Trained_Boxer_Tussles_With_Trained_Kangaroo_(Dorgan)_(cropped).jpg |
+| cat_stretch_1.jpg | Ehrenbach, two cats, one stretching (cropped 2026).jpg | Gerda Arendt | CC0 | https://commons.wikimedia.org/wiki/File:Ehrenbach,_two_cats,_one_stretching_(cropped_2026).jpg |
+| kangaroo_boxer_1.jpg | William Boyd - Bill Boyd boxing with his pet kangaroo, Kanga Joe - Goo | 
+William Boyd (1901 - 1998) – Artist (Australian)  | Public domain | https://commons.wikimedia.org/wiki/File:William_Boyd_-_Bill_Boyd_boxing_with_his_pet_kangaroo,_Kanga_Joe_-_Google_Art_Project.jpg |
+| hare_1.jpg | Rabbit standing on hind legs LCCN2004674687.jpg | Miscellaneous Items in High Demand, PPOC, Library  | Public domain | https://commons.wikimedia.org/wiki/File:Rabbit_standing_on_hind_legs_LCCN2004674687.jpg |
+| orangutan_1.jpg | Orangutan with infant.jpg | Brett Jordan | CC0 | https://commons.wikimedia.org/wiki/File:Orangutan_with_infant.jpg |
+| bear_1.jpg | Black bear near Phantom Lake (33074dca-2308-4d2f-b209-3c91bf3a03cb).jp | Neal Herbert | Public domain | https://commons.wikimedia.org/wiki/File:Black_bear_near_Phantom_Lake_(33074dca-2308-4d2f-b209-3c91bf3a03cb).jpg |
+| trapeze_artist_1.jpg | Trapeze Artist James Lechay.jpg | James Lechay | Public domain | https://commons.wikimedia.org/wiki/File:Trapeze_Artist_James_Lechay.jpg |
+| kneeling_1.jpg | Krul Tepes cosplayer kneeling on a sofa 20180216.jpg | izhora22 | CC0 | https://commons.wikimedia.org/wiki/File:Krul_Tepes_cosplayer_kneeling_on_a_sofa_20180216.jpg |
+| magician_1.jpg | Zan Zig performing with rabbit and roses, magician poster, 1899.jpg | Strobridge Litho. Co., Cincinnati &amp; New York | Public domain | https://commons.wikimedia.org/wiki/File:Zan_Zig_performing_with_rabbit_and_roses,_magician_poster,_1899.jpg |
+| drummer_1.jpg | Francis David Soiron - Drummer - B1977.14.11145 - Yale Center for Brit | François David Soiron | CC0 | https://commons.wikimedia.org/wiki/File:Francis_David_Soiron_-_Drummer_-_B1977.14.11145_-_Yale_Center_for_British_Art.jpg |
+| wushu_1.jpg | Wushu.jpg | Mostafameraji | CC0 | https://commons.wikimedia.org/wiki/File:Wushu.jpg |
+| wushu_2.jpg | کنگفوو.jpg | Mostafameraji | CC0 | https://commons.wikimedia.org/wiki/File:%DA%A9%D9%86%DA%AF%D9%81%D9%88%D9%88.jpg |
+| wushu_3.jpg | Wushu in Iran Qom City Mustafa Meraji 04.jpg | Mostafameraji | CC0 | https://commons.wikimedia.org/wiki/File:Wushu_in_Iran_Qom_City_Mustafa_Meraji_04.jpg |
+| wushu_4.jpg | Wushu in Iran Qom City Mustafa Meraji 09.jpg | Mostafameraji | CC0 | https://commons.wikimedia.org/wiki/File:Wushu_in_Iran_Qom_City_Mustafa_Meraji_09.jpg |
+| cartwheel_1.jpg | Демонстрација на баланс стои на глава.jpg | Делфина | CC0 | https://commons.wikimedia.org/wiki/File:%D0%94%D0%B5%D0%BC%D0%BE%D0%BD%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D1%98%D0%B0_%D0%BD%D0%B0_%D0%B1%D0%B0%D0%BB%D0%B0%D0%BD%D1%81_%D1%81%D1%82%D0%BE%D0%B8_%D0%BD%D0%B0_%D0%B3%D0%BB%D0%B0%D0%B2%D0%B0.jpg |
+| tango_1.jpg | Fileteado Tango Martiniano Arce II.jpg | I´m the owner of this work | Public domain | https://commons.wikimedia.org/wiki/File:Fileteado_Tango_Martiniano_Arce_II.jpg |
+| kneeling_soldier_1.jpg | U.S. Army Staff Sgt. Thomas Tavenner Conducts His Last Walk at the Tom | Arlington National Cemetery | Public domain | https://commons.wikimedia.org/wiki/File:U.S._Army_Staff_Sgt._Thomas_Tavenner_Conducts_His_Last_Walk_at_the_Tomb_of_the_Unknown_Soldier_and_Earns_the_Guard,_Tomb_of_the_Unknown_Soldier_Identification_Badge_on_11_March_2024_-_23.jpg |
+| wrestler_2.jpg | Jimmy Snuka pose 1983.png | Unknown authorUnknown author | Public domain | https://commons.wikimedia.org/wiki/File:Jimmy_Snuka_pose_1983.png |
+| high_kick_1.jpg | Tiger Mask I high kick 1983.png | Unknown authorUnknown author | Public domain | https://commons.wikimedia.org/wiki/File:Tiger_Mask_I_high_kick_1983.png |
+| discus_throw_1.jpg | Discus thrower at a women's athletics at Downey Park, Brisbane, 1953.j | State Library of Queensland | No restrictions | https://commons.wikimedia.org/wiki/File:Discus_thrower_at_a_women%27s_athletics_at_Downey_Park,_Brisbane,_1953.jpg |
+| figure_skating_4.jpg | 2011 World Figure Skating Championships.jpg | deerstop | CC0 | https://commons.wikimedia.org/wiki/File:2011_World_Figure_Skating_Championships.jpg |
+| figure_skating_5.jpg | 2011 Figure Skating WC Tomáš Verner (4).jpg | deerstop | CC0 | https://commons.wikimedia.org/wiki/File:2011_Figure_Skating_WC_Tom%C3%A1%C5%A1_Verner_(4).jpg |
+| stilt_walker_1.jpg | Moscow, stilts performer on Garden Ring September 2024 02.jpg | Retired electrician | CC0 | https://commons.wikimedia.org/wiki/File:Moscow,_stilts_performer_on_Garden_Ring_September_2024_02.jpg |
+| trapeze_artist_2.jpg | Charmion holds an umbrella on the trapeze, 1904.png | Frederick Whitman Glasier | Public domain | https://commons.wikimedia.org/wiki/File:Charmion_holds_an_umbrella_on_the_trapeze,_1904.png |
+| lunge_1.jpg | 2CR Dragoon Week 2024- PT Competition (8426704).jpg | U.S. Army 22MPAD by Spc. Zoe Tourne | Public domain | https://commons.wikimedia.org/wiki/File:2CR_Dragoon_Week_2024-_PT_Competition_(8426704).jpg |
+| tree_pose_1.jpg | Park Ranger in Joshua Tree Yoga Pose (50695393088).jpg | Joshua Tree National Park | Public domain | https://commons.wikimedia.org/wiki/File:Park_Ranger_in_Joshua_Tree_Yoga_Pose_(50695393088).jpg |
+| yoga_1.jpg | Park Ranger in Downward Coyote Yoga Pose (50696210552).jpg | Joshua Tree National Park | Public domain | https://commons.wikimedia.org/wiki/File:Park_Ranger_in_Downward_Coyote_Yoga_Pose_(50696210552).jpg |
+| tree_pose_2.jpg | Park Ranger in Joshua Tree Yoga Pose (50695377468).jpg | Joshua Tree National Park | Public domain | https://commons.wikimedia.org/wiki/File:Park_Ranger_in_Joshua_Tree_Yoga_Pose_(50695377468).jpg |
+| childs_pose_1.jpg | Park Ranger in Desert Tortoise Pose (50696199372).jpg | Joshua Tree National Park | Public domain | https://commons.wikimedia.org/wiki/File:Park_Ranger_in_Desert_Tortoise_Pose_(50696199372).jpg |
+| lumberjack_1.jpg | A blow to the axis-More lumber for the Army - NARA - 513717.jpg | 
+Unknown authorUnknown author or not provided | Public domain | https://commons.wikimedia.org/wiki/File:A_blow_to_the_axis-More_lumber_for_the_Army_-_NARA_-_513717.jpg |
+| handstand_1.jpg | Handstand freeze.jpg | Redclown at English Wikipedia | Public domain | https://commons.wikimedia.org/wiki/File:Handstand_freeze.jpg |
+| shrug_1.jpg | Shrug recreated recreated.jpg | Wunderfitzig | CC0 | https://commons.wikimedia.org/wiki/File:Shrug_recreated_recreated.jpg |
+| leapfrog_1.jpg | Leapfrog 1932.jpg | Agence de presse Mondial Photo-Presse | Public domain | https://commons.wikimedia.org/wiki/File:Leapfrog_1932.jpg |
+| judo_throw_1.jpg | EIJC 2025 Kata - 54383009045.jpg | Edmonton International Judo Championship | Public domain | https://commons.wikimedia.org/wiki/File:EIJC_2025_Kata_-_54383009045.jpg |
+| judo_throw_2.jpg | 2024 EIJC Kata - 53594817502.jpg | Edmonton International Judo Championship | Public domain | https://commons.wikimedia.org/wiki/File:2024_EIJC_Kata_-_53594817502.jpg |
+| judo_throw_3.jpg | 2024 EIJC Kata - 53595897888.jpg | Edmonton International Judo Championship | Public domain | https://commons.wikimedia.org/wiki/File:2024_EIJC_Kata_-_53595897888.jpg |
+| judo_throw_4.jpg | EIJC 2025 Kata - 54383008070.jpg | Edmonton International Judo Championship | Public domain | https://commons.wikimedia.org/wiki/File:EIJC_2025_Kata_-_54383008070.jpg |
+| pole_fitness_1.jpg | Pole dancer.jpg | Alkivar at English Wikipedia
+
+Later versions were  | Public domain | https://commons.wikimedia.org/wiki/File:Pole_dancer.jpg |
+| spearman_1.jpg | Orchesographie (1589) marching soldier illustration (f. 15v).png | Unknown authorUnknown author | Public domain | https://commons.wikimedia.org/wiki/File:Orchesographie_(1589)_marching_soldier_illustration_(f._15v).png |
+| boxer_1.jpg | Ramses Thimoumi VS Reda Ramani - right hand punch.jpg | Sports check facts | CC0 | https://commons.wikimedia.org/wiki/File:Ramses_Thimoumi_VS_Reda_Ramani_-_right_hand_punch.jpg |
+| polynesian_dancer_1.jpg | Haka at the Hale Koa Hotel USMC-04235.jpg |  | Public domain | https://commons.wikimedia.org/wiki/File:Haka_at_the_Hale_Koa_Hotel_USMC-04235.jpg |
+| warrior_pose_1.jpg | USMC-100529-M-3740P-417.jpg |  | Public domain | https://commons.wikimedia.org/wiki/File:USMC-100529-M-3740P-417.jpg |
+| bridge_pose_1.jpg | Yogui Tanumânasî en Chakrasana.jpg | Jesús Bonilla (Tanumânasî) | Public domain | https://commons.wikimedia.org/wiki/File:Yogui_Tanum%C3%A2nas%C3%AE_en_Chakrasana.jpg |
+| aerobics_1.jpg | Aerobics class.jpg | Bill Branson (Photographer) | Public domain | https://commons.wikimedia.org/wiki/File:Aerobics_class.jpg |
+| lunge_2.jpg | Airman performing lunge.jpg | U.S. Air Force photo by Senior Airman Myles Stepp | Public domain | https://commons.wikimedia.org/wiki/File:Airman_performing_lunge.jpg |
+| vitruvian_man_1.jpg | Vitruvian jumping jacks.gif | orig. Leonardo Vinci; animated by Damian Yerrick | Public domain | https://commons.wikimedia.org/wiki/File:Vitruvian_jumping_jacks.gif |
+| jumping_jack_1.jpg | U.S. Marine Corps Sgt. Edan Valkner, center, demonstrates a star jump  | MC1 Kim Williams | Public domain | https://commons.wikimedia.org/wiki/File:U.S._Marine_Corps_Sgt._Edan_Valkner,_center,_demonstrates_a_star_jump_for_members_of_the_Royal_Barbados_Defense_Force_during_a_martial_arts_educational_exchange_in_Bridgetown,_Barbados,_Aug._20,_2010_100820-N-EP471-050.jpg |
+| tug_of_war_1.jpg | Tug-of-war.jpg | Tech. Sgt. Dan Neely | Public domain | https://commons.wikimedia.org/wiki/File:Tug-of-war.jpg |
+| baseball_batter_1.jpg | Baseball swing.jpg |  | Public domain | https://commons.wikimedia.org/wiki/File:Baseball_swing.jpg |
+| rock_guitarist_1.jpg | Rock en centro de São Paulo.jpg | Wilfredor | CC0 | https://commons.wikimedia.org/wiki/File:Rock_en_centro_de_S%C3%A3o_Paulo.jpg |
+| aircraft_marshaller_1.jpg | Maintainers kick it into high gear 140520-F-UP786-023.jpg | Staff Sgt. Jim Araos | Public domain | https://commons.wikimedia.org/wiki/File:Maintainers_kick_it_into_high_gear_140520-F-UP786-023.jpg |
+| yoga_class_1.jpg | Warriors posed to break Yoga record at Al Udeid Air Base 150711-F-BN30 | Staff Sgt. Alex Montes | Public domain | https://commons.wikimedia.org/wiki/File:Warriors_posed_to_break_Yoga_record_at_Al_Udeid_Air_Base_150711-F-BN304-095.jpg |
+| baseball_batter_2.jpg | How to play baseball, a manual for boys (1914) (14577601310).jpg | Internet Archive Book Images | No restrictions | https://commons.wikimedia.org/wiki/File:How_to_play_baseball,_a_manual_for_boys_(1914)_(14577601310).jpg |
+| trapeze_artist_3.jpg | Five male trapeze artists performing at a circus, 1890.jpg | trialsanderrors | Public domain | https://commons.wikimedia.org/wiki/File:Five_male_trapeze_artists_performing_at_a_circus,_1890.jpg |
+| splits_1.jpg | Tkdkidstretching.jpg |  | Public domain | https://commons.wikimedia.org/wiki/File:Tkdkidstretching.jpg |
+| taekwondo_kick_1.jpg | Taekwondo side kick.jpg | Cerebellum | Public domain | https://commons.wikimedia.org/wiki/File:Taekwondo_side_kick.jpg |
+| ballet_arabesque_1.jpg | Anna Pavlova-Butterfly.jpg |  | Public domain | https://commons.wikimedia.org/wiki/File:Anna_Pavlova-Butterfly.jpg |
+| surfer_1.jpg | Big Surfer riding a wave Colac Bay.jpg | Ben Murrin | Public domain | https://commons.wikimedia.org/wiki/File:Big_Surfer_riding_a_wave_Colac_Bay.jpg |
+| golf_swing_1.jpg | Armedforces jeffery tee shot.jpg | Master Sgt. Steve Miller | Public domain | https://commons.wikimedia.org/wiki/File:Armedforces_jeffery_tee_shot.jpg |
+| evzone_guard_1.jpg | Evzone marching at the Unknown soldier tomb Athens Greece.jpg | Jebulon | CC0 | https://commons.wikimedia.org/wiki/File:Evzone_marching_at_the_Unknown_soldier_tomb_Athens_Greece.jpg |
+| rodeo_1.jpg | A cowboy, having lassoed his calf, approaches for the takedown at a la | Carol M. Highsmith | Public domain | https://commons.wikimedia.org/wiki/File:A_cowboy,_having_lassoed_his_calf,_approaches_for_the_takedown_at_a_large_outdoor_rodeo_that%27s_a_feature_of_the_annual_(in_this_case_75th_anniversary)_Jubilee_festival_in_Laramie,_Wyoming_LCCN2015633132.tif |
+| ballerina_1.jpg | SuzanneFarrell1965.jpg | Ron Kroon (ANEFO) | CC0 | https://commons.wikimedia.org/wiki/File:SuzanneFarrell1965.jpg |
+| unicyclist_1.jpg | Unicycle (PSF).png | Pearson Scott Foresman | Public domain | https://commons.wikimedia.org/wiki/File:Unicycle_(PSF).png |
+| trapeze_artist_4.jpg | Trapeze, Flying Jump, from the Gymnastic Exercises series (N77) for Du | W. Duke, Sons &amp; Co. | CC0 | https://commons.wikimedia.org/wiki/File:Trapeze,_Flying_Jump,_from_the_Gymnastic_Exercises_series_(N77)_for_Duke_brand_cigarettes_MET_DP827461.jpg |
+| dancer_1.jpg | Dancing in the Sun (Unsplash).jpg | Jesse Uli jesse_uli | CC0 | https://commons.wikimedia.org/wiki/File:Dancing_in_the_Sun_(Unsplash).jpg |
+| cancan_1.jpg | Two dancers with high kick, from the Actresses series (N245) issued by | Kinney Brothers Tobacco Company | CC0 | https://commons.wikimedia.org/wiki/File:Two_dancers_with_high_kick,_from_the_Actresses_series_(N245)_issued_by_Kinney_Brothers_to_promote_Sweet_Caporal_Cigarettes_MET_DP859949.jpg |
+| lumberjack_2.jpg | De Middachterallee gaat verdwijnen. Plannen zijn gemaakt om in het voo | Fotograaf Onbekend / Anefo, [onbekend] | CC0 | https://commons.wikimedia.org/wiki/File:De_Middachterallee_gaat_verdwijnen._Plannen_zijn_gemaakt_om_in_het_voorjaar_de_p,_Bestanddeelnr_072-0605.jpg |
+| baseball_batter_3.jpg | Softball batter vh.jpg | JTerkelsen at Danish Wikipedia | Public domain | https://commons.wikimedia.org/wiki/File:Softball_batter_vh.jpg |
+| traffic_police_1.jpg | Traffic Cop, Newport LCCN2014699391.jpg | Bain News Service, publisher | Public domain | https://commons.wikimedia.org/wiki/File:Traffic_Cop,_Newport_LCCN2014699391.jpg |
+| ballet_arabesque_2.jpg | Madam Lubouska, National American Ballet, 6-30-25 LCCN2016840160.jpg | National Photo Company Collection | Public domain | https://commons.wikimedia.org/wiki/File:Madam_Lubouska,_National_American_Ballet,_6-30-25_LCCN2016840160.jpg |
+| diving_catch_1.jpg | Rome Braves vs. Asheville Tourists, May 30, 2018 - Catching ball near  | Thomson200 | CC0 | https://commons.wikimedia.org/wiki/File:Rome_Braves_vs._Asheville_Tourists,_May_30,_2018_-_Catching_ball_near_dugout.jpg |
+| hammer_throw_1.jpg | Hammer Thrower (PSF).png | Pearson Scott Foresman | Public domain | https://commons.wikimedia.org/wiki/File:Hammer_Thrower_(PSF).png |
+| trapeze_artist_5.jpg | Charmion on trapeze.jpg | Photographer unknown; published by Ogden's | Public domain | https://commons.wikimedia.org/wiki/File:Charmion_on_trapeze.jpg |
+| squat_1.jpg | Marine Corps officer candidate participate in physical training.jpg | U.S. Marine Corps photo by Lance Cpl. Phuchung Ngu | Public domain | https://commons.wikimedia.org/wiki/File:Marine_Corps_officer_candidate_participate_in_physical_training.jpg |
+| baseball_catcher_1.jpg | Johnny Sturm catching a ball - New York Yankees - 1941.jpg | This work is in the public domain in the United St | Public domain | https://commons.wikimedia.org/wiki/File:Johnny_Sturm_catching_a_ball_-_New_York_Yankees_-_1941.jpg |
+| leapfrog_2.jpg | Franse jongens spelen 'haasje over' (bokspringen), RP-F-F01164-46-3.jp | Rijksmuseum | CC0 | https://commons.wikimedia.org/wiki/File:Franse_jongens_spelen_%27haasje_over%27_(bokspringen),_RP-F-F01164-46-3.jpg |
+| judo_throw_5.jpg | Hankaigarami.jpg | 吉田千春 | Public domain | https://commons.wikimedia.org/wiki/File:Hankaigarami.jpg |
+| harlequin_1.jpg | Eugeniusz Zak - Dancer (Jumping jack) - MPW 820 MNW - National Museum  | Eugeniusz Zak | Public domain | https://commons.wikimedia.org/wiki/File:Eugeniusz_Zak_-_Dancer_(Jumping_jack)_-_MPW_820_MNW_-_National_Museum_in_Warsaw.jpg |

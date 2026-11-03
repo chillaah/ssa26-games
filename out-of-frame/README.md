@@ -35,8 +35,8 @@ view, the photo is stamped **MISS** and still counts as a loss.
 ## Pose match
 
 After each snap, the game finds the player's pose and shows the `gallery/` picture that matches it best
-("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 80 public-domain / CC0 photos
-from Wikimedia Commons (athletes, dancers, statues, clowns, animals); see `gallery/CREDITS.md`.
+("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 158 public-domain / CC0 photos
+from Wikimedia Commons (athletes, dancers, martial artists, performers, statues, animals); see `gallery/CREDITS.md`.
 Each picture is shown at most once per game.
 
 - Drop images (`.jpg`/`.png`) into `gallery/`. Poses are read automatically on the next start and cached in

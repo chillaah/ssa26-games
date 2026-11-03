@@ -18,7 +18,7 @@ from . import render as R
 from .config import Config
 from .detector import PersonDetector, ShotVerdict, judge, union_mask
 from .framer import Box, Framer, lerp, difficulty
-from .pose import Gallery, GalleryItem, Pose, PoseEstimator, draw_skeleton
+from .pose import Gallery, GalleryItem, Pose, PoseEstimator, draw_skeleton, visible_limbs
 
 log = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ class Game:
         if self.poser is None:
             return None
         pose = self.poser.player(frame)
-        if pose is None:
+        if pose is None or visible_limbs(pose, self.cfg.pose.conf) < self.cfg.pose.min_limbs:
             return None
         item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf)
         log.info("shot %d: pose match %s (%.2f%s)", len(self.shots), item.path.name if item else "-",

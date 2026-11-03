@@ -75,6 +75,10 @@ def limb_vectors(kpts: np.ndarray, conf: np.ndarray, min_conf: float) -> Tuple[n
     return vecs, ok
 
 
+def visible_limbs(pose: Pose, min_conf: float = 0.3) -> int:
+    return int(limb_vectors(pose.kpts, pose.conf, min_conf)[1].sum())
+
+
 def mirror(kpts: np.ndarray, conf: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     k = np.asarray(kpts, float)[FLIP_IDX].copy()
     k[:, 0] = -k[:, 0]
@@ -82,7 +86,9 @@ def mirror(kpts: np.ndarray, conf: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def similarity(a: Pose, b: Pose, min_conf: float = 0.3) -> float:
-    """0..1. Weighted mean agreement of limb directions, scaled down when few limbs are shared."""
+    """0..1. Weighted mean agreement of limb directions. Only limbs seen in `a` (the player) count,
+    so a player cut off by the frame is matched on what is visible; limbs of `a` that `b` lacks
+    lower the score."""
     va, oka = limb_vectors(a.kpts, a.conf, min_conf)
     vb, okb = limb_vectors(b.kpts, b.conf, min_conf)
     w = np.array([l[2] for l in LIMBS])
@@ -92,7 +98,7 @@ def similarity(a: Pose, b: Pose, min_conf: float = 0.3) -> float:
     angle = np.degrees(np.arccos(np.clip((va * vb).sum(1), -1.0, 1.0)))
     agree = np.exp(-(angle / ANGLE_TOLERANCE_DEG) ** 2)  # 1 when parallel, ~0.37 at the tolerance
     score = (agree * w)[both].sum() / w[both].sum()
-    return float(score * w[both].sum() / w[oka | okb].sum())
+    return float(score * w[both].sum() / w[oka].sum())
 
 
 @dataclass

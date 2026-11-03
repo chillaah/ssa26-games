@@ -31,7 +31,7 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | gymnast_1.jpg | Australian gymnast at 2020 Gymnix Cup.jpg | Miguel Angel Omaña Rojas | CC0 | https://commons.wikimedia.org/wiki/File:Australian_gymnast_at_2020_Gymnix_Cup.jpg |
 | gymnast_2.jpg | Canadian gymnast at the 2020 Gymnix Cup.jpg | Miguel Angel Omaña Rojas | CC0 | https://commons.wikimedia.org/wiki/File:Canadian_gymnast_at_the_2020_Gymnix_Cup.jpg |
 | gymnast_3.jpg | Canadian gymnast at the 2020 Gymnix Cup beam routine.jpg | Miguel Angel Omaña Rojas | CC0 | https://commons.wikimedia.org/wiki/File:Canadian_gymnast_at_the_2020_Gymnix_Cup_beam_routine.jpg |
-| jumping_person_1.jpg | Kittinger-jump.jpg | U.S. Air Force/Volkmar Wentzel | Public domain | https://commons.wikimedia.org/wiki/File:Kittinger-jump.jpg |
+| skydiver_1.jpg | Kittinger-jump.jpg | U.S. Air Force/Volkmar Wentzel | Public domain | https://commons.wikimedia.org/wiki/File:Kittinger-jump.jpg |
 | scarecrow_1.jpg | Scarecrow in farm.jpg | Mohsen H.Rahimi | CC0 | https://commons.wikimedia.org/wiki/File:Scarecrow_in_farm.jpg |
 | gymnast_4.jpg | Klaas Boot jr nederlands turner in 1950.jpg | Fotopersbureau De Boer | CC0 | https://commons.wikimedia.org/wiki/File:Klaas_Boot_jr_nederlands_turner_in_1950.jpg |
 | figure_skating_2.jpg | 2011 Figure Skating WC Denis Ten (2).jpg | deerstop | CC0 | https://commons.wikimedia.org/wiki/File:2011_Figure_Skating_WC_Denis_Ten_(2).jpg |
@@ -65,12 +65,12 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | tennis_serve_2.jpg | ServeYourCountry.jpg | Paul Martin | Public domain | https://commons.wikimedia.org/wiki/File:ServeYourCountry.jpg |
 | baseball_pitcher_3.jpg | Norman A. "Nick" Cullop, pitcher, New York AL (baseball) LCCN201470113 | Bain News Service, publisher | Public domain | https://commons.wikimedia.org/wiki/File:Norman_A._%22Nick%22_Cullop,_pitcher,_New_York_AL_(baseball)_LCCN2014701136.jpg |
 | cheerleader_1.jpg | Dallas-001216-N-1110A-513.jpg | Photographer's Mate 1st Class Tina M. Ackerman | Public domain | https://commons.wikimedia.org/wiki/File:Dallas-001216-N-1110A-513.jpg |
-| jumping_person_2.jpg | 720th Special Tactics Group airmen jump 20071003.jpg | U.S. Air Force Airmen from the 720th Special Tacti | Public domain | https://commons.wikimedia.org/wiki/File:720th_Special_Tactics_Group_airmen_jump_20071003.jpg |
+| skydiver_2.jpg | 720th Special Tactics Group airmen jump 20071003.jpg | U.S. Air Force Airmen from the 720th Special Tacti | Public domain | https://commons.wikimedia.org/wiki/File:720th_Special_Tactics_Group_airmen_jump_20071003.jpg |
 | discobolus_4.jpg | Discus Thrower - Washington, D.C. - 2.JPG | AgnosticPreachersKid | Public domain | https://commons.wikimedia.org/wiki/File:Discus_Thrower_-_Washington,_D.C._-_2.JPG |
 | discobolus_5.jpg | Discus Thrower - Washington, D.C. - 3.JPG | AgnosticPreachersKid | Public domain | https://commons.wikimedia.org/wiki/File:Discus_Thrower_-_Washington,_D.C._-_3.JPG |
 | bodybuilder_posing_3.jpg | Fisicoculturismo argentino AFCA 1ª lugar Torneo Mr Valentin Alsina 197 | Horacio patrone | Public domain | https://commons.wikimedia.org/wiki/File:Fisicoculturismo_argentino_AFCA_1%C2%AA_lugar_Torneo_Mr_Valentin_Alsina_1970_categoria_Novicios.jpg_altura_1,85_mts_peso_89_kilos,pose_de_espalda.jpg |
 | bodybuilder_posing_4.jpg | Fisicoculturismo argentino .AFCA . HORACIO PATRONE 1ª lugar MR. GIMNAS | Horacio patrone | Public domain | https://commons.wikimedia.org/wiki/File:Fisicoculturismo_argentino_.AFCA_._HORACIO_PATRONE_1%C2%AA_lugar_MR._GIMNASIO_ROMA_1966_en_categoria_Mayor_altura_1,85_mts_,peso_77_kilos,-_edad_17_a%C3%B1os.jpg |
-| slam_dunk_1.jpg | Cosplayer of Mitsuyoshi Anzai, Slam Dunk at CWT50 20181208b.jpg | 玄史生 | CC0 | https://commons.wikimedia.org/wiki/File:Cosplayer_of_Mitsuyoshi_Anzai,_Slam_Dunk_at_CWT50_20181208b.jpg |
+| basketball_cosplay_1.jpg | Cosplayer of Mitsuyoshi Anzai, Slam Dunk at CWT50 20181208b.jpg | 玄史生 | CC0 | https://commons.wikimedia.org/wiki/File:Cosplayer_of_Mitsuyoshi_Anzai,_Slam_Dunk_at_CWT50_20181208b.jpg |
 | sumo_wrestler_1.jpg | Female Sumo Wrestlers.jpg | Pseudonym: Ko, Likely 須磨利之, Toshiyuki Suma | Public domain | https://commons.wikimedia.org/wiki/File:Female_Sumo_Wrestlers.jpg |
 | mime_artist_1.jpg | Charles Deburau - Pierrot écoutant, by Nadar, 1854-1855.jpg | Felix Nadar | Public domain | https://commons.wikimedia.org/wiki/File:Charles_Deburau_-_Pierrot_%C3%A9coutant,_by_Nadar,_1854-1855.jpg |
 | chimpanzee_1.jpg | A chimpanzee (Pan troglodytes).jpg | Vasil Vyagov | Public domain | https://commons.wikimedia.org/wiki/File:A_chimpanzee_(Pan_troglodytes).jpg |
@@ -78,9 +78,9 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | penguin_1.jpg | Portrait of an African penguin walking fast.jpg | Stanislav Stelmakhovich | CC0 | https://commons.wikimedia.org/wiki/File:Portrait_of_an_African_penguin_walking_fast.jpg |
 | monkey_1.jpg | Monkey looking away.jpg | Rebeccananonof | CC0 | https://commons.wikimedia.org/wiki/File:Monkey_looking_away.jpg |
 | chimpanzee_2.jpg | Chimpanzee seated at typewriter.jpg | New York Zoological Society | Public domain | https://commons.wikimedia.org/wiki/File:Chimpanzee_seated_at_typewriter.jpg |
-| dog_standing_hind_legs_1.jpg | White-tailed prairie dog - DPLA - 08040ed2a53a739eccb18e93bc4f7360.jpg | Department of the Interior. U.S. Fish and Wildlife | Public domain | https://commons.wikimedia.org/wiki/File:White-tailed_prairie_dog_-_DPLA_-_08040ed2a53a739eccb18e93bc4f7360.jpg |
-| baboon_1.jpg | Baboon Figurine MET 66.99.139.jpg |  | CC0 | https://commons.wikimedia.org/wiki/File:Baboon_Figurine_MET_66.99.139.jpg |
-| baboon_2.jpg | Baboon MET LC-30 8 348 EGDP023568.jpg |  | CC0 | https://commons.wikimedia.org/wiki/File:Baboon_MET_LC-30_8_348_EGDP023568.jpg |
+| prairie_dog_1.jpg | White-tailed prairie dog - DPLA - 08040ed2a53a739eccb18e93bc4f7360.jpg | Department of the Interior. U.S. Fish and Wildlife | Public domain | https://commons.wikimedia.org/wiki/File:White-tailed_prairie_dog_-_DPLA_-_08040ed2a53a739eccb18e93bc4f7360.jpg |
+| baboon_statue_1.jpg | Baboon Figurine MET 66.99.139.jpg |  | CC0 | https://commons.wikimedia.org/wiki/File:Baboon_Figurine_MET_66.99.139.jpg |
+| baboon_statue_2.jpg | Baboon MET LC-30 8 348 EGDP023568.jpg |  | CC0 | https://commons.wikimedia.org/wiki/File:Baboon_MET_LC-30_8_348_EGDP023568.jpg |
 | long_jump_1.jpg | 2007 Military World Games long jump.jpg | The U.S. Army | Public domain | https://commons.wikimedia.org/wiki/File:2007_Military_World_Games_long_jump.jpg |
 | high_jump_1.jpg | Stamp of Indonesia - 2004 - Colnect 248135 - Olympic Games - High Jump | Post of Indonesia | Public domain | https://commons.wikimedia.org/wiki/File:Stamp_of_Indonesia_-_2004_-_Colnect_248135_-_Olympic_Games_-_High_Jump.jpeg |
 | pole_vault_1.jpg | Ben Charlebois competes in the pole vault competition.jpg | Justin R. Pacheco | Public domain | https://commons.wikimedia.org/wiki/File:Ben_Charlebois_competes_in_the_pole_vault_competition.jpg |

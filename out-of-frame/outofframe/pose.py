@@ -34,13 +34,13 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 # COCO-17: 0 nose, 5/6 shoulders, 7/8 elbows, 9/10 wrists, 11/12 hips, 13/14 knees, 15/16 ankles.
 # 17 = mid-shoulder, 18 = mid-hip (added below).
 FLIP_IDX = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
-LIMBS = [  # (from, to, weight)
-    (5, 7, 1.0), (7, 9, 1.0), (6, 8, 1.0), (8, 10, 1.0),  # arms
-    (11, 13, 1.0), (13, 15, 1.0), (12, 14, 1.0), (14, 16, 1.0),  # legs
-    (18, 17, 2.0),  # torso lean
-    (17, 0, 0.5),  # head tilt
+LIMBS = [  # (from, to, weight). Arms carry most of what makes a pose; legs are usually straight.
+    (5, 7, 1.5), (7, 9, 1.5), (6, 8, 1.5), (8, 10, 1.5),  # arms
+    (11, 13, 0.6), (13, 15, 0.6), (12, 14, 0.6), (14, 16, 0.6),  # legs
+    (18, 17, 1.0),  # torso lean
+    (17, 0, 0.3),  # head tilt
 ]
-ANGLE_TOLERANCE_DEG = 35.0
+ANGLE_TOLERANCE_DEG = 30.0
 UNSEEN_WEIGHT = 0.3
 # Limb directions of someone standing straight with arms down (image y points down).
 NEUTRAL = np.array([[0.0, 1.0]] * 8 + [[0.0, -1.0], [0.0, -1.0]])
@@ -77,6 +77,19 @@ def limb_vectors(kpts: np.ndarray, conf: np.ndarray, min_conf: float) -> Tuple[n
         if c[a] >= min_conf and c[b] >= min_conf and n > 1e-6:
             vecs[i], ok[i] = d / n, True
     return vecs, ok
+
+
+def _standing() -> "Pose":
+    k = {0: (300, 150), 5: (350, 235), 6: (250, 235), 7: (372, 330), 8: (228, 330), 9: (378, 420),
+         10: (222, 420), 11: (330, 420), 12: (270, 420), 13: (335, 560), 14: (265, 560),
+         15: (340, 700), 16: (260, 700)}
+    return Pose(np.array([k.get(i, (0, 0)) for i in range(17)], float),
+                np.array([1.0 if i in k else 0.0 for i in range(17)]), (200, 100, 400, 720))
+
+
+def neutral_score(pose: "Pose", min_conf: float = 0.3) -> float:
+    """How close a pose is to standing still with arms down (0..1). Real poses score below ~0.65."""
+    return similarity(pose, STANDING, min_conf)
 
 
 def visible_limbs(pose: Pose, min_conf: float = 0.3) -> int:
@@ -227,6 +240,9 @@ def draw_skeleton(img: np.ndarray, pose: Pose, color=(0, 255, 255), thickness: i
     for i, p in enumerate(pts):
         if pose.conf[i] >= min_conf:
             cv2.circle(img, p, thickness + 2, color, -1, cv2.LINE_AA)
+
+
+STANDING = _standing()
 
 
 def main() -> None:

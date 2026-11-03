@@ -7,7 +7,6 @@ All images are public domain or CC0 (from Wikimedia Commons), resized to 800 px.
 | bodybuilder_posing_1.jpg | "A New Sandow Pose (VIII)", Eugen Sandow Wellcome L0035270 - restorati | 
 D. Bernard &amp; Co, Melbourne (photographer)
 Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Pose_(VIII)%22,_Eugen_Sandow_Wellcome_L0035270_-_restoration_(cropped).jpg |
-| baseball_pitcher_1.jpg | Elmer Ellsworth Mike Smith, Pitcher, Cincinnati, from the Old Judge se | Goodwin &amp; Company | CC0 | https://commons.wikimedia.org/wiki/File:Elmer_Ellsworth_Mike_Smith,_Pitcher,_Cincinnati,_from_the_Old_Judge_series_(N172)_for_Old_Judge_Cigarettes_MET_DP845646.jpg |
 | baseball_pitcher_2.jpg | F. Hutchinson, Pitcher, Chicago, from the Old Judge series (N172) for  | Goodwin &amp; Company | CC0 | https://commons.wikimedia.org/wiki/File:F._Hutchinson,_Pitcher,_Chicago,_from_the_Old_Judge_series_(N172)_for_Old_Judge_Cigarettes_MET_DP825076.jpg |
 | conductor_1.jpg | Photo Collage Musical Conductor MET DP-15801-035.jpg | Juan Pedro Chabalgoity | CC0 | https://commons.wikimedia.org/wiki/File:Photo_Collage_Musical_Conductor_MET_DP-15801-035.jpg |
 | tai_chi_1.jpg | Tai Chi in a park.JPG | Michael Raab | CC0 | https://commons.wikimedia.org/wiki/File:Tai_Chi_in_a_park.JPG |
@@ -57,7 +56,6 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | volleyball_spike_1.jpg | Ready, set ... spike! 150811-M-ZZ999-045.jpg | U.S. Marine Corps photo by Maria Kanai/Released | Public domain | https://commons.wikimedia.org/wiki/File:Ready,_set_..._spike!_150811-M-ZZ999-045.jpg |
 | parkour_1.jpg | Parkour speed vault.jpg | Danhje | Public domain | https://commons.wikimedia.org/wiki/File:Parkour_speed_vault.jpg |
 | skateboarding_trick_2.jpg | Skateboarding trick indy grab.jpg | Drange net at English Wikipedia | Public domain | https://commons.wikimedia.org/wiki/File:Skateboarding_trick_indy_grab.jpg |
-| funny_pose_1.jpg | Woman in Funny Pose (32156991894).jpg | Cloyne and District Historical Society from Cloyne | No restrictions | https://commons.wikimedia.org/wiki/File:Woman_in_Funny_Pose_(32156991894).jpg |
 | acrobat_2.jpg | Oil lamp in the form of a bearded acrobat MET DP-12411-001.jpg | Agostino Zoppo | CC0 | https://commons.wikimedia.org/wiki/File:Oil_lamp_in_the_form_of_a_bearded_acrobat_MET_DP-12411-001.jpg |
 | discobolus_2.jpg | Discobolus side 2.jpg | RickyBennison | CC0 | https://commons.wikimedia.org/wiki/File:Discobolus_side_2.jpg |
 | skateboarding_trick_3.jpg | Person doing skateboard trick (Unsplash).jpg | Andrea Junqueira musiua | CC0 | https://commons.wikimedia.org/wiki/File:Person_doing_skateboard_trick_(Unsplash).jpg |
@@ -70,7 +68,6 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | discobolus_5.jpg | Discus Thrower - Washington, D.C. - 3.JPG | AgnosticPreachersKid | Public domain | https://commons.wikimedia.org/wiki/File:Discus_Thrower_-_Washington,_D.C._-_3.JPG |
 | bodybuilder_posing_3.jpg | Fisicoculturismo argentino AFCA 1ª lugar Torneo Mr Valentin Alsina 197 | Horacio patrone | Public domain | https://commons.wikimedia.org/wiki/File:Fisicoculturismo_argentino_AFCA_1%C2%AA_lugar_Torneo_Mr_Valentin_Alsina_1970_categoria_Novicios.jpg_altura_1,85_mts_peso_89_kilos,pose_de_espalda.jpg |
 | bodybuilder_posing_4.jpg | Fisicoculturismo argentino .AFCA . HORACIO PATRONE 1ª lugar MR. GIMNAS | Horacio patrone | Public domain | https://commons.wikimedia.org/wiki/File:Fisicoculturismo_argentino_.AFCA_._HORACIO_PATRONE_1%C2%AA_lugar_MR._GIMNASIO_ROMA_1966_en_categoria_Mayor_altura_1,85_mts_,peso_77_kilos,-_edad_17_a%C3%B1os.jpg |
-| basketball_cosplay_1.jpg | Cosplayer of Mitsuyoshi Anzai, Slam Dunk at CWT50 20181208b.jpg | 玄史生 | CC0 | https://commons.wikimedia.org/wiki/File:Cosplayer_of_Mitsuyoshi_Anzai,_Slam_Dunk_at_CWT50_20181208b.jpg |
 | sumo_wrestler_1.jpg | Female Sumo Wrestlers.jpg | Pseudonym: Ko, Likely 須磨利之, Toshiyuki Suma | Public domain | https://commons.wikimedia.org/wiki/File:Female_Sumo_Wrestlers.jpg |
 | mime_artist_1.jpg | Charles Deburau - Pierrot écoutant, by Nadar, 1854-1855.jpg | Felix Nadar | Public domain | https://commons.wikimedia.org/wiki/File:Charles_Deburau_-_Pierrot_%C3%A9coutant,_by_Nadar,_1854-1855.jpg |
 | chimpanzee_1.jpg | A chimpanzee (Pan troglodytes).jpg | Vasil Vyagov | Public domain | https://commons.wikimedia.org/wiki/File:A_chimpanzee_(Pan_troglodytes).jpg |
@@ -79,15 +76,12 @@ Ada | Public domain | https://commons.wikimedia.org/wiki/File:%22A_New_Sandow_Po
 | monkey_1.jpg | Monkey looking away.jpg | Rebeccananonof | CC0 | https://commons.wikimedia.org/wiki/File:Monkey_looking_away.jpg |
 | chimpanzee_2.jpg | Chimpanzee seated at typewriter.jpg | New York Zoological Society | Public domain | https://commons.wikimedia.org/wiki/File:Chimpanzee_seated_at_typewriter.jpg |
 | prairie_dog_1.jpg | White-tailed prairie dog - DPLA - 08040ed2a53a739eccb18e93bc4f7360.jpg | Department of the Interior. U.S. Fish and Wildlife | Public domain | https://commons.wikimedia.org/wiki/File:White-tailed_prairie_dog_-_DPLA_-_08040ed2a53a739eccb18e93bc4f7360.jpg |
-| baboon_statue_1.jpg | Baboon Figurine MET 66.99.139.jpg |  | CC0 | https://commons.wikimedia.org/wiki/File:Baboon_Figurine_MET_66.99.139.jpg |
-| baboon_statue_2.jpg | Baboon MET LC-30 8 348 EGDP023568.jpg |  | CC0 | https://commons.wikimedia.org/wiki/File:Baboon_MET_LC-30_8_348_EGDP023568.jpg |
 | long_jump_1.jpg | 2007 Military World Games long jump.jpg | The U.S. Army | Public domain | https://commons.wikimedia.org/wiki/File:2007_Military_World_Games_long_jump.jpg |
 | high_jump_1.jpg | Stamp of Indonesia - 2004 - Colnect 248135 - Olympic Games - High Jump | Post of Indonesia | Public domain | https://commons.wikimedia.org/wiki/File:Stamp_of_Indonesia_-_2004_-_Colnect_248135_-_Olympic_Games_-_High_Jump.jpeg |
 | pole_vault_1.jpg | Ben Charlebois competes in the pole vault competition.jpg | Justin R. Pacheco | Public domain | https://commons.wikimedia.org/wiki/File:Ben_Charlebois_competes_in_the_pole_vault_competition.jpg |
 | clown_1.jpg | Auguste clown holding a rubber chicken.jpg | Splatstheclown | CC0 | https://commons.wikimedia.org/wiki/File:Auguste_clown_holding_a_rubber_chicken.jpg |
 | clown_2.jpg | Auguste clown reading a book upside-down.jpg | Splatstheclown | CC0 | https://commons.wikimedia.org/wiki/File:Auguste_clown_reading_a_book_upside-down.jpg |
 | javelin_throw_1.jpg | Enrique Thompson competing in the javelin throw, circa 1922.jpg | Unknown authorUnknown author | Public domain | https://commons.wikimedia.org/wiki/File:Enrique_Thompson_competing_in_the_javelin_throw,_circa_1922.jpg |
-| clown_3.jpg | 1886 Toulouse-Lautrec Clown anagoria.JPG | Henri de Toulouse-Lautrec | Public domain | https://commons.wikimedia.org/wiki/File:1886_Toulouse-Lautrec_Clown_anagoria.JPG |
 | wrestler_1.jpg | Wrestling (2870345845).jpg | William van der Weyde | No restrictions | https://commons.wikimedia.org/wiki/File:Wrestling_(2870345845).jpg |
 | clown_4.jpg | -Clown- MET DP325372.jpg | Charles DeForest Fredricks | CC0 | https://commons.wikimedia.org/wiki/File:-Clown-_MET_DP325372.jpg |
 | fencing_lunge_1.jpg | 2nd Leonidas Pirgos Fencing Tournament. Advance lunge targeting the ar | George E. Koronaios | CC0 | https://commons.wikimedia.org/wiki/File:2nd_Leonidas_Pirgos_Fencing_Tournament._Advance_lunge_targeting_the_arm_of_the_opponent.jpg |

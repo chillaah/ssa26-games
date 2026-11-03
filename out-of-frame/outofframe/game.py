@@ -18,7 +18,8 @@ from . import render as R
 from .config import Config
 from .detector import PersonDetector, ShotVerdict, judge, union_mask
 from .framer import Box, Framer, lerp, difficulty
-from .pose import Gallery, GalleryItem, Pose, PoseEstimator, draw_skeleton, visible_limbs
+from .pose import (Gallery, GalleryItem, Pose, PoseEstimator, draw_skeleton, neutral_score,
+                   visible_limbs)
 
 log = logging.getLogger(__name__)
 
@@ -189,6 +190,9 @@ class Game:
         pose = self.poser.player(frame)
         if pose is None or visible_limbs(pose, self.cfg.pose.conf) < self.cfg.pose.min_limbs:
             return None
+        if neutral_score(pose, self.cfg.pose.conf) > self.cfg.pose.max_neutral:
+            log.info("shot %d: no pose match, player is standing still", len(self.shots))
+            return None
         item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf, self.used_pictures,
                                                   self.rng, self.cfg.pose.tie)
         log.info("shot %d: pose match %s (%.2f%s)", len(self.shots), item.path.name if item else "-",
@@ -264,6 +268,8 @@ class Game:
                    font=R.FONT_BOLD)
             R.text(canvas, "Stay in view of the camera, but out of the box", (cx, int(H * 0.82)),
                    1.3, R.WHITE, 2)
+            if self.poser is not None:
+                R.text(canvas, "Strike a pose at every snap!", (cx, int(H * 0.89)), 1.3, d.accent, 3)
         elif self.state in (MOVING, LOCKING, FLASH):
             R.dim_outside(canvas, box, 0.5)
             if self.state == MOVING:

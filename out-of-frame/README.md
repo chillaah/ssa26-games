@@ -35,7 +35,7 @@ view, the photo is stamped **MISS** and still counts as a loss.
 ## Pose match
 
 After each snap, the game finds the player's pose and shows the `gallery/` picture that matches it best
-("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 86 public-domain / CC0 photos
+("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 80 public-domain / CC0 photos
 from Wikimedia Commons (athletes, dancers, statues, clowns, animals); see `gallery/CREDITS.md`.
 Each picture is shown at most once per game.
 
@@ -44,6 +44,8 @@ Each picture is shown at most once per game.
 - For a picture the pose model can't read (an animal, a letter), write its keypoints into `index.json`
   by hand with `"manual": true`.
 - Check a photo against the gallery: `python -m outofframe.pose --test photo.jpg`
+- No picture is shown when the player is just standing still (`pose.max_neutral`): players are asked to
+  strike a pose at every snap.
 - Settings: `pose.show_s` (time on screen), `pose.min_score` (weakest match still shown), `pose.enabled`.
 
 ## Run on the Mac

@@ -95,9 +95,10 @@ class PoseCfg:
     conf: float = 0.30
     gallery_dir: str = "gallery"
     show_s: float = 1.6  # how long the match is on screen
-    min_score: float = 0.45  # 0..1; below this no match is shown
+    min_score: float = 0.6  # 0..1; below this no match is shown
     min_limbs: int = 4  # of 10 (arms, legs, torso, head); fewer visible -> no match shown
     tie: float = 0.05  # pick at random among matches this close to the best (variety)
+    max_neutral: float = 0.68  # player standing still (closer than this to arms-down) -> no match
 
 
 @dataclass

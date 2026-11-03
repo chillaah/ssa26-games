@@ -40,6 +40,9 @@ LIMBS = [  # (from, to, weight)
     (17, 0, 0.5),  # head tilt
 ]
 ANGLE_TOLERANCE_DEG = 35.0
+UNSEEN_WEIGHT = 0.3
+# Limb directions of someone standing straight with arms down (image y points down).
+NEUTRAL = np.array([[0.0, 1.0]] * 8 + [[0.0, -1.0], [0.0, -1.0]])
 SKELETON = [(5, 7), (7, 9), (6, 8), (8, 10), (11, 13), (13, 15), (12, 14), (14, 16),
             (5, 6), (11, 12), (5, 11), (6, 12), (0, 5), (0, 6)]
 
@@ -95,10 +98,22 @@ def similarity(a: Pose, b: Pose, min_conf: float = 0.3) -> float:
     both = oka & okb
     if not both.any():
         return 0.0
-    angle = np.degrees(np.arccos(np.clip((va * vb).sum(1), -1.0, 1.0)))
-    agree = np.exp(-(angle / ANGLE_TOLERANCE_DEG) ** 2)  # 1 when parallel, ~0.37 at the tolerance
+    agree = _agree(va, vb)
     score = (agree * w)[both].sum() / w[both].sum()
-    return float(score * w[both].sum() / w[oka].sum())
+    score *= w[both].sum() / w[oka].sum()
+    # Limbs the player doesn't show (e.g. legs below the frame) are assumed to be in a plain
+    # standing position, weakly, so an unseen leg doesn't match a kick as well as a straight leg.
+    unseen = okb & ~oka
+    if unseen.any():
+        prior = _agree(NEUTRAL[unseen], vb[unseen])
+        pw = UNSEEN_WEIGHT * w[unseen]
+        score = (score * w[oka].sum() + (prior * pw).sum()) / (w[oka].sum() + pw.sum())
+    return float(score)
+
+
+def _agree(va: np.ndarray, vb: np.ndarray) -> np.ndarray:
+    angle = np.degrees(np.arccos(np.clip((va * vb).sum(1), -1.0, 1.0)))
+    return np.exp(-(angle / ANGLE_TOLERANCE_DEG) ** 2)  # 1 when parallel, ~0.37 at the tolerance
 
 
 @dataclass
@@ -108,7 +123,7 @@ class GalleryItem:
 
     @property
     def name(self) -> str:
-        return self.path.stem.replace("_", " ").replace("-", " ").upper()
+        return self.path.stem.replace("__", " + ").replace("_", " ").replace("-", " ").upper()
 
 
 class PoseEstimator:

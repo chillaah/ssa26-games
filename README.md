@@ -21,6 +21,12 @@ Each project's README covers its configs (`mac`, `mac_siyi`, `jetson*`), SIYI A8
 
 Model weights (`*.pt`), captured sessions and visitor data are not tracked in git.
 
+## Jetson desktop shortcuts
+
+On the Jetson, `./jetson/install-shortcuts.sh` puts **Out of Frame** and **Drone Booth** icons on the
+desktop. Out of Frame first asks which `configs/jetson*.yaml` to use (`jetson_steady` is pre-selected).
+Each opens a terminal with the log, also saved to `/tmp/outofframe.log` / `/tmp/dronebooth.log`.
+
 ## Branding
 
 Both projects use The Scouts brand: Poppins, the Scouts logo, and the Ebony / Dutch / Powder palette.

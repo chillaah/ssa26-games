@@ -2,8 +2,10 @@
 camera:
   # Hardware-decoded RTSP from the A8 mini. It streams H.265 even though the path is "main.264";
   # if it is switched to H.264, swap rtph265depay/h265parse for rtph264depay/h264parse.
+  # protocols=tcp: over UDP the Jetson dropped packets at 1080p (kernel receive buffer full),
+  # which smudges the picture until the next keyframe. TCP lost none in the same test.
   source: >-
-    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 protocols=tcp latency=0 !
     rtph265depay ! h265parse ! nvv4l2decoder ! nvvidconv !
     video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
     appsink drop=1 max-buffers=1 sync=false

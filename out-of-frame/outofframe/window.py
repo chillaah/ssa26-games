@@ -1,11 +1,14 @@
 """The game window: fullscreen toggle, an on-screen close button, and clean shutdown.
 
+FrameGuard keeps the main loop running through camera dropouts and one-off errors.
+
 The close button sits in the top-right corner. Tap it once to arm it, then again within a few
 seconds to close, so a stray tap from a visitor doesn't end the game. Closing the window from the
 desktop (when not fullscreen) also quits. The same file is in both projects; keep them in sync.
 """
 from __future__ import annotations
 
+import logging
 import signal
 import time
 from typing import Optional, Tuple
@@ -14,6 +17,8 @@ import cv2
 import numpy as np
 
 from . import brand as B
+
+log = logging.getLogger(__name__)
 
 CONFIRM_S = 3.0  # second tap must come within this long
 
@@ -109,3 +114,43 @@ class GameWindow:
         cv2.destroyAllWindows()
         for _ in range(5):  # let the GUI backend actually tear the window down
             cv2.waitKey(1)
+
+
+class FrameGuard:
+    """Keeps the main loop alive for days of unattended running.
+
+    - fresh(): a frame older than stale_s counts as no frame ("Waiting for camera..."). If no new
+      frame arrives for restart_s (startup_s before the first one), exit with code 75 so the
+      launcher restarts the game: a stalled GStreamer/RTSP read can't be unstuck from inside.
+    - error(): log an exception from one frame and carry on; more than max_errors in window_s
+      exits with code 70 (launcher restarts). The caller resets the game to its start screen.
+    """
+
+    def __init__(self, stale_s: float = 2.0, restart_s: float = 15.0, startup_s: float = 45.0,
+                 max_errors: int = 5, window_s: float = 60.0):
+        self.stale_s, self.restart_s, self.startup_s = stale_s, restart_s, startup_s
+        self.max_errors, self.window_s = max_errors, window_s
+        self._start = time.monotonic()
+        self._last_new: Optional[float] = None
+        self._last_t: Optional[float] = None
+        self._errors: list = []
+
+    def fresh(self, frame, frame_t: float, now: float):
+        if frame is not None and frame_t != self._last_t:
+            self._last_t, self._last_new = frame_t, now
+        since = now - (self._last_new if self._last_new is not None else self._start)
+        limit = self.restart_s if self._last_new is not None else self.startup_s
+        if since > limit:
+            log.error("No camera frames for %.0f s; exiting so the launcher restarts the game", since)
+            raise SystemExit(75)
+        if frame is None or now - frame_t > self.stale_s:
+            return None
+        return frame
+
+    def error(self, now: float) -> None:
+        log.exception("Error in the game loop; resetting to the start screen")
+        self._errors = [t for t in self._errors if now - t < self.window_s] + [now]
+        if len(self._errors) > self.max_errors:
+            log.error("%d errors in %.0f s; exiting so the launcher restarts the game",
+                      len(self._errors), self.window_s)
+            raise SystemExit(70)

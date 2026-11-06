@@ -487,3 +487,37 @@ def test_leads_are_saved_locally(tmp_path):
     store.add_lead("abc123", "Ada", "ada@example.com", "Scouts", True)
     rows = (tmp_path / "leads.csv").read_text().splitlines()
     assert rows[0].startswith("time,photo_id,name,email,company") and "ada@example.com" in rows[1]
+
+
+def test_frame_guard_waits_restarts_and_survives_errors():
+    import pytest
+
+    from outofframe.window import FrameGuard
+
+    g = FrameGuard(stale_s=2, restart_s=15, startup_s=45, max_errors=5, window_s=60)
+    g._start = 0.0
+    f = np.zeros((4, 4, 3), np.uint8)
+    assert g.fresh(None, 0.0, 10.0) is None  # no camera yet, still starting up
+    assert g.fresh(f, 50.0, 40.0 + 10.0) is f  # first frame
+    assert g.fresh(f, 50.0, 53.0) is None  # same frame for 3 s: stale -> "Waiting for camera"
+    with pytest.raises(SystemExit) as e:
+        g.fresh(f, 50.0, 66.0)  # nothing new for 16 s: restart the game
+    assert e.value.code == 75
+    g2 = FrameGuard(max_errors=5, window_s=60)
+    for t in range(5):
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            g2.error(float(t))  # five errors: keep going
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        with pytest.raises(SystemExit) as e:
+            g2.error(5.0)
+    assert e.value.code == 70
+    g3 = FrameGuard(max_errors=5, window_s=60)
+    for t in range(0, 600, 30):  # one error every 30 s, forever: never exits
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            g3.error(float(t))

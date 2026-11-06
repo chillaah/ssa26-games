@@ -86,6 +86,11 @@ class Booth:
         self.notice = ""
         self.notice_until = 0.0
 
+    def reset(self, now: float) -> None:
+        """Back to the live screen (used after an unexpected error)."""
+        self.notice = ""
+        self._set(LIVE, now)
+
     def _set(self, state: str, now: float) -> None:
         self.state, self.state_t = state, now
 

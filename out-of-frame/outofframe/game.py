@@ -113,6 +113,11 @@ class Game:
         self.session_dir = Path(self.cfg.game.save_dir) / stamp
         self._set(GET_READY, now)
 
+    def reset(self, now: float) -> None:
+        """Back to the start screen (used after an unexpected error)."""
+        self.match = None
+        self._set(ATTRACT, now)
+
     def _set(self, state: str, now: float) -> None:
         log.debug("state %s -> %s", self.state, state)
         self.state, self.state_t = state, now

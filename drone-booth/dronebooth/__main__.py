@@ -12,7 +12,7 @@ from .detector import PersonDetector
 from .booth import Booth, LiveScanner
 from .config import load_booth_config
 from .server import PhotoStore, ShareServer
-from .window import GameWindow, quit_on_signals
+from .window import FrameGuard, GameWindow, quit_on_signals
 
 
 def main() -> None:
@@ -51,13 +51,19 @@ def main() -> None:
             window = GameWindow(cfg.display.window_name, cfg.display.fullscreen,
                                 (cfg.display.width, cfg.display.height))
             stack.callback(window.destroy)
+            guard = FrameGuard()
             while not (booth.quit or window.close_requested):
-                frame, _ = camera.read()
                 now = time.monotonic()
-                window.show(booth.step(now, frame))
-                key = window.poll()
-                if key != 255:
-                    booth.on_key(key, now)
+                frame, frame_t = camera.read()
+                frame = guard.fresh(frame, frame_t, now)
+                try:
+                    window.show(booth.step(now, frame))
+                    key = window.poll()
+                    if key != 255:
+                        booth.on_key(key, now)
+                except Exception:
+                    guard.error(now)
+                    booth.reset(now)
         except KeyboardInterrupt:
             pass
         logging.info("Shutting down")

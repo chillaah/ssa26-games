@@ -25,12 +25,39 @@ Model weights (`*.pt`), captured sessions and visitor data are not tracked in gi
 
 On the Jetson, `./jetson/install-shortcuts.sh` puts **Out of Frame** and **Drone Booth** icons on the
 desktop. Out of Frame first asks which `configs/jetson*.yaml` to use (`jetson_steady` is pre-selected).
-Each opens a terminal with the log, also saved to `/tmp/outofframe.log` / `/tmp/dronebooth.log`. The terminal closes
-by itself when the game exits cleanly and stays open if it stopped with an error.
+Each opens a terminal with the log, also saved to `~/ssa26-logs/outofframe.log` / `dronebooth.log` (kept across
+reboots, rotated at 50 MB; `/tmp/<game>.log` links to it).
 
 To close either game, tap the X at the top right twice (the first tap arms it), or press q / Esc.
 Closing the window or terminal, Ctrl+C or `pkill` also shut it down cleanly: camera stopped, gimbal
 centred, share server closed.
+
+## Running for days (the event)
+
+- **Crash restart:** if a game exits with an error, its launcher starts it again after 3 s (logged as
+  "exited with code N; restart"). Only a deliberate close (X, q, Esc) stops it.
+- **Errors don't end a game:** an error while drawing a frame is logged and the game goes back to its start
+  screen. More than 5 in a minute exits, and the launcher restarts it.
+- **Camera dropouts:** the camera reader reconnects by itself (tested: about 2 s when the camera restarts its
+  stream). While frames are missing the screen says "Waiting for camera...". If none arrive for 15 s,
+  the game exits and the launcher restarts it with a fresh video pipeline.
+- **Camera stream:** both launchers run `jetson/camera_stream.py 1920 1080 4000` first, which sets the A8 mini's
+  main stream back to 1080p H.265 at 4 Mbps if it was changed (e.g. reset after a power cycle).
+- **Screen on, no pop-ups:** run `./jetson/kiosk-setup.sh` once on the Jetson. It turns off screen blanking (it was set to
+  12 minutes), the lock screen, dimming, notification banners and software-update pop-ups, and saves the old
+  values first. `./jetson/kiosk-setup.sh --undo` puts them back.
+
+## Network at the event
+
+- **Camera:** Ethernet `enP8p1s0`, profile "Wired connection 1", static `192.168.144.20/24`. The A8 mini is at
+  `192.168.144.25`. Internet goes over Wi-Fi (a phone hotspot or the venue Wi-Fi), which takes priority over the
+  camera link (route metric 600 vs 20100). Checked after a reboot: the camera profile comes up by itself. The
+  other wired profile, "enP8p1s0" (`192.168.0.1`), is tied to another machine's network card, so it never
+  activates here.
+- **Wi-Fi:** join the hotspot or venue Wi-Fi once (it reconnects by itself after that). A venue network with a
+  login page needs that login done once in the Jetson's browser, or the photo tunnel can't reach the internet.
+- **Time zone:** the launchers run the games with `TZ=Asia/Singapore`, so photo times and dates are local
+  whatever the system time zone is (the Jetson is set to Asia/Colombo).
 
 ## Photo downloads from any phone
 

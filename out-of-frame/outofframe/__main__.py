@@ -13,7 +13,7 @@ from .framer import FollowingFramer, make_framer
 from .game import Game
 from .pose import Gallery, PoseEstimator
 from .share import PhotoStore, ShareServer
-from .window import GameWindow, quit_on_signals
+from .window import FrameGuard, GameWindow, quit_on_signals
 
 
 def main() -> None:
@@ -72,15 +72,21 @@ def main() -> None:
             window = GameWindow(cfg.display.window_name, cfg.display.fullscreen,
                                 (cfg.display.width, cfg.display.height))
             stack.callback(window.destroy)
+            guard = FrameGuard()
             while not (game.quit or window.close_requested):
-                frame, frame_t = camera.read()
-                if steady is not None and frame is not None:
-                    frame = steady.apply(frame, frame_t)
                 now = time.monotonic()
-                window.show(game.step(now, frame))
-                key = window.poll()
-                if key != 255:
-                    game.on_key(key, now)
+                frame, frame_t = camera.read()
+                frame = guard.fresh(frame, frame_t, now)
+                try:
+                    if steady is not None and frame is not None:
+                        frame = steady.apply(frame, frame_t)
+                    window.show(game.step(now, frame))
+                    key = window.poll()
+                    if key != 255:
+                        game.on_key(key, now)
+                except Exception:
+                    guard.error(now)
+                    game.reset(now)
         except KeyboardInterrupt:
             pass
         logging.info("Shutting down")

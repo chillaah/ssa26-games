@@ -257,7 +257,7 @@ class Game:
             R.brackets(canvas, box, d.accent, 4)
             pulse = 0.5 + 0.5 * np.sin(now * 3)
             R.logo(canvas, d.logo, (cx, int(H * 0.075)), int(H * 0.07))
-            R.text(canvas, "OUT OF FRAME", (cx, int(H * 0.19)), 3.6, R.WHITE, font=R.FONT_BOLD)
+            R.text(canvas, "Out of Frame", (cx, int(H * 0.19)), 3.6, R.WHITE, font=R.FONT_BOLD)
             R.text(canvas, "The camera takes %d photos. Stay out of every one." % self.cfg.game.shots,
                    (cx, int(H * 0.285)), 1.3, R.WHITE, font=R.FONT_REGULAR)
             R.text(canvas, "Dodge them all and win a prize!", (cx, int(H * 0.345)), 1.3, d.accent,
@@ -303,7 +303,7 @@ class Game:
         if not self._socials:
             return
         W, H = self.cfg.display.width, self.cfg.display.height
-        R.text(canvas, "Follow Scouts", (W // 2, int(H * 0.585)), 1.2, R.WHITE, font=R.FONT_SEMIBOLD)
+        R.text(canvas, "Follow Scouts Socials", (W // 2, int(H * 0.585)), 1.2, R.WHITE, font=R.FONT_SEMIBOLD)
         q = int(H * 0.22)  # QR side
         p = int(q * 0.07)  # white card around the code
         gap = int(W * 0.12)

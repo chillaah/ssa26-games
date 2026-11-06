@@ -18,10 +18,11 @@ framer:
     follow_gimbal: true
     follow_yaw_deg: 6            # lean when the box reaches the left/right edge
     follow_pitch_deg: 4          # lean when the box reaches the top/bottom edge
-    # Measured on the A8 mini in upside-down mode: +yaw turns the camera toward the right of its
-    # (unmirrored) image and +pitch aims it lower, so both axes are flipped here.
-    follow_invert_yaw: true
-    follow_invert_pitch: true
+    # Measured on the A8 mini mounted for the event (2026-11-06): +yaw turns the camera toward the
+    # left of its (unmirrored) image and +pitch aims it higher, so neither axis is flipped. Set both
+    # to true if the camera is used upright on a table in upside-down mode.
+    follow_invert_yaw: false
+    follow_invert_pitch: false
     steady_view: true            # shift each frame back so the view looks still (slight zoom)
     steady_latency_s: 0.075      # measured best 0.05-0.1 s; raise/lower if the picture lags/leads
   siyi:

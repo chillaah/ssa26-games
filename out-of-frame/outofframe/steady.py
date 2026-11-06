@@ -83,9 +83,10 @@ class SteadyView:
         my = k * (self.cfg.follow_pitch_deg + self.cfg.steady_margin_deg)
         scale = max(w / (w - 2 * mx), h / (h - 2 * my))
         dyaw, dpitch = self.offset_at(frame_t - self.cfg.steady_latency_s)
-        # Turning the camera by +yaw / +pitch slides the (unmirrored) image left / up; slide it back.
-        sx = k * dyaw * (-1 if self.mirror else 1)
-        sy = k * dpitch
+        # Turning the camera by +yaw / +pitch slides the (unmirrored) image right / down, or
+        # left / up when follow_invert_yaw / follow_invert_pitch is set; slide it back.
+        sx = k * dyaw * (1 if self.cfg.follow_invert_yaw else -1) * (-1 if self.mirror else 1)
+        sy = k * dpitch * (1 if self.cfg.follow_invert_pitch else -1)
         sx, sy = max(-mx, min(mx, sx)), max(-my, min(my, sy))
         m = np.float32([[scale, 0, (1 - scale) * w / 2 + scale * sx],
                         [0, scale, (1 - scale) * h / 2 + scale * sy]])

@@ -215,27 +215,29 @@ def test_steady_view_cancels_gimbal_shift():
 
     rng = np.random.default_rng(0)
     scene = cv2.GaussianBlur(rng.random((720, 1280)).astype(np.float32), (15, 15), 4)
-    cfg = VirtualFramerCfg(steady_latency_s=0.0)
-    k = cfg.steady_px_per_deg
-
-    def steadied(dyaw, dpitch, mirror):
+    def steadied(cfg, dyaw, dpitch, mirror):
+        k = cfg.steady_px_per_deg
         g = Gimbal()
         view = SteadyView(g, cfg, (0, 0), mirror)
         view.ref = (-2.4, 180.0)
         g.attitude = (-2.4 + dyaw, wrap(180.0 + dpitch), 0.0)
-        # +yaw/+pitch slides the unmirrored image left/up
-        raw = np.roll(scene, (-round(k * dpitch), -round(k * dyaw)), axis=(0, 1))
+        # +yaw/+pitch slides the unmirrored image right/down, or left/up when inverted
+        sy = 1 if cfg.follow_invert_pitch else -1
+        sx = 1 if cfg.follow_invert_yaw else -1
+        raw = np.roll(scene, (-sy * round(k * dpitch), -sx * round(k * dyaw)), axis=(0, 1))
         img = cv2.flip(raw, 1) if mirror else raw
         return view.apply(img, 1.0)
 
     def wrap(a):
         return (a + 180) % 360 - 180
 
-    for mirror in (False, True):
-        still = steadied(0, 0, mirror)
-        for dyaw, dpitch in [(5, 0), (-4, 3), (0, -3.5)]:
-            (dx, dy), _ = cv2.phaseCorrelate(still, steadied(dyaw, dpitch, mirror))
-            assert abs(dx) < 2 and abs(dy) < 2, (mirror, dyaw, dpitch, dx, dy)
+    for invert in (False, True):
+        cfg = VirtualFramerCfg(steady_latency_s=0.0, follow_invert_yaw=invert, follow_invert_pitch=invert)
+        for mirror in (False, True):
+            still = steadied(cfg, 0, 0, mirror)
+            for dyaw, dpitch in [(5, 0), (-4, 3), (0, -3.5)]:
+                (dx, dy), _ = cv2.phaseCorrelate(still, steadied(cfg, dyaw, dpitch, mirror))
+                assert abs(dx) < 2 and abs(dy) < 2, (invert, mirror, dyaw, dpitch, dx, dy)
 
 
 def _pose_kpts(**over):

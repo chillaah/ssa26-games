@@ -120,7 +120,7 @@ class GameCfg:
 
 @dataclass
 class DisplayCfg:
-    window_name: str = "OUT OF FRAME - The Scouts"
+    window_name: str = "Out of Frame - The Scouts"
     fullscreen: bool = False
     width: int = 1920
     height: int = 1080

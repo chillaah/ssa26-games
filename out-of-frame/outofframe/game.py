@@ -77,6 +77,7 @@ class Game:
         self.collage: Optional[np.ndarray] = None
         self.share_url = ""
         self.share_qr: Optional[np.ndarray] = None
+        self._bonus_bg: Optional[Tuple[np.ndarray, Tuple[int, int, int, int]]] = None
         C.background()  # build the collage backdrop now, not at the end of the first game
         self._socials = []  # (social, QR image) shown on the attract screen
         for soc in cfg.display.socials:
@@ -178,6 +179,7 @@ class Game:
             self._begin_round(now, size)
         elif self.cfg.game.bonus_pose and self.gallery is not None:
             self.bonus_item = self._pick_bonus()
+            self._bonus_bg = None
             log.info("bonus round: %s", self.bonus_item.path.name)
             self._set(BONUS, now)
         else:
@@ -417,17 +419,25 @@ class Game:
         d = self.cfg.display
         W, H = d.width, d.height
         g = self.cfg.game
-        canvas[:] = R.INK
-        R.logo(canvas, d.logo, (60, 70), 56, anchor="left")
+        if self._bonus_bg is None:
+            # Everything but the live camera and the countdown stays put: draw it once
+            # (the big rounded cards cost ~100 ms a frame on the Jetson).
+            bg = np.empty_like(canvas)
+            bg[:] = R.INK
+            R.logo(bg, d.logo, (60, 70), 56, anchor="left")
+            R.text(bg, "Copy this pose for your souvenir photo!", (W // 2, int(H * 0.155)), 1.3,
+                   R.WHITE, font=R.FONT_REGULAR)
+            top = int(H * 0.2)
+            R.card(bg, self._gallery_image(self.bonus_item), (60, top, W // 2 - 30, H - 50),
+                   self.bonus_item.name, d.accent)
+            inner = R.card(bg, None, (W // 2 + 30, top, W - 60, H - 50), "YOU", R.WHITE)
+            self._bonus_bg = (bg, inner)
+        bg, inner = self._bonus_bg
+        np.copyto(canvas, bg)
+        live = R.paste_fit(canvas, frame, inner)
         pop = min(1.0, dt / 0.3) if self.state == BONUS else 1.0
         R.text(canvas, "BONUS ROUND", (W // 2, int(H * 0.085)), 2.6 + 0.8 * (1 - pop), d.accent,
                font=R.FONT_BOLD)
-        R.text(canvas, "Copy this pose for your souvenir photo!", (W // 2, int(H * 0.155)), 1.3,
-               R.WHITE, font=R.FONT_REGULAR)
-        top = int(H * 0.2)
-        pic = self._gallery_image(self.bonus_item)
-        R.card(canvas, pic, (60, top, W // 2 - 30, H - 50), self.bonus_item.name, d.accent)
-        live = R.card(canvas, frame, (W // 2 + 30, top, W - 60, H - 50), "YOU", R.WHITE)
         if self.state == BONUS:
             left = g.bonus_s - dt
             cx, cy = (live[0] + live[2]) // 2, (live[1] + live[3]) // 2

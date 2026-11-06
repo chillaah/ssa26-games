@@ -182,7 +182,7 @@ def photo_page(pid: str, name: str = "") -> str:
       const file = new File([blob], 'scouts-drone-booth.jpg', {{ type: 'image/jpeg' }});
       if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
         await navigator.share({{ files: [file], title: 'Scouts Drone Booth',
-                                 text: 'I got caught by The Scouts drone at Safety & Security Asia!' }});
+                                 text: 'I got captured by The Scouts drone at Safety & Security Asia!' }});
       }} else {{ window.location = '/img/{pid}.jpg'; }}
     }} catch (e) {{ /* share sheet dismissed */ }}
   }});
@@ -236,7 +236,7 @@ def make_handler(store: PhotoStore, cfg: ShareCfg):
                 return self._html(200, form_page(pid, cfg))
             if path == "/":
                 return self._html(200, message_page("Scouts Drone Booth",
-                                                    "Visit The Scouts booth to get caught by our drone."))
+                                                    "Visit The Scouts booth to get captured by our drone."))
             self._html(404, message_page("Not found", ""))
 
         def do_POST(self):

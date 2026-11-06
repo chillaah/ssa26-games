@@ -539,3 +539,33 @@ def test_result_text_tells_misses_from_catches():
     assert result_line(shots("spotted", "spotted", "dodged", "dodged")) == "You were spotted in 2 of 4 photos."
     assert result_line(shots("spotted", "missed", "dodged", "dodged")) == \
         "You were spotted in 1 of 4 photos and out of view in 1."
+
+
+def _gop_run(pattern, guard=None):
+    """Feed 'K'/'P' frames (40 ms apart, '_' = a frame lost) and return clean flags."""
+    from outofframe.camera import GopGuard
+
+    g = guard or GopGuard()
+    out, pts = [], 0
+    for c in pattern:
+        pts += 40
+        if c != "_":
+            out.append(g.see(c == "K", pts))
+    return out
+
+
+def test_gop_guard_skips_until_first_keyframe():
+    assert _gop_run("PPPKPP") == [False, False, False, True, True, True]
+
+
+def test_gop_guard_flags_lost_keyframe_until_next():
+    gop = "K" + "P" * 24
+    flags = _gop_run(gop * 3 + "P" * 25 + gop)  # 4th keyframe never arrived
+    assert all(flags[:75])
+    assert not any(flags[75:100])
+    assert all(flags[100:])
+
+
+def test_gop_guard_flags_lost_frames_until_next_keyframe():
+    flags = _gop_run("K" + "P" * 10 + "__" + "P" * 12 + "K" + "P" * 3)
+    assert all(flags[:11]) and not any(flags[11:23]) and all(flags[23:])

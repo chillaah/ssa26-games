@@ -2,7 +2,7 @@
 """Check / set the SIYI A8 mini main video stream (what both games read over RTSP).
 
     python3 jetson/camera_stream.py                 # show it
-    python3 jetson/camera_stream.py 1920 1080 4000  # make sure it is 1080p H.265 at 4000 kbps
+    python3 jetson/camera_stream.py 1920 1080 2000  # make sure it is 1080p H.265 at 2000 kbps
 
 Standard library only. Talks to the camera's SDK port (UDP 37260); the setting is only sent
 if it differs, so running it before every game start is harmless. Exits 0 even if the camera

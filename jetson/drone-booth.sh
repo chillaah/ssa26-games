@@ -22,7 +22,7 @@ fi
 ln -sf "$LOG" /tmp/dronebooth.log  # old location still works
 
 # The camera may forget its stream setting after a power cycle: make sure it is 1080p.
-python3 "$REPO/jetson/camera_stream.py" 1920 1080 4000 2>&1 | tee -a "$LOG"
+python3 "$REPO/jetson/camera_stream.py" 1920 1080 2000 2>&1 | tee -a "$LOG"
 
 echo "Starting the Drone Booth with configs/jetson.yaml (log: $LOG)"
 echo "Close: the X button at the top right (tap twice), or q / Esc. f toggles fullscreen."

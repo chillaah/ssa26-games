@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import contextlib
 import logging
+import os
+import sys
 import time
 
 from .camera import Camera
@@ -68,6 +70,12 @@ def main() -> None:
             pass
         logging.info("Shutting down")
     logging.info("Closed cleanly")
+    # Everything is stopped and saved. Exit now with code 0: native threads (GStreamer, TensorRT)
+    # can abort Python's own teardown, and a non-zero exit would make the launcher restart the game.
+    logging.shutdown()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

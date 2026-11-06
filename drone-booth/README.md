@@ -1,12 +1,14 @@
-# Caught by Scouts — the dronebooth
+# Scouts Drone Booth
 
 Part of The Scouts booth at Safety & Security Asia 2026. Its sibling game is in `../out-of-frame`.
 
-A live "surveillance" view shows the camera feed, with an amber **SCANNING...** box on every person.
+A live "surveillance" view shows the camera feed, with an amber **SCANNING...** box on every person,
+and QR codes for The Scouts' Instagram and LinkedIn in the bottom corners (`display.socials`).
 A visitor presses `SPACE`, gets a 3-2-1 countdown and a flash, and the souvenir photo is created:
-1080×1440 (Instagram's 3:4 portrait), cropped from the camera image around the people in it.
-The photo has a security-cam look: every person gets a red **THREAT DETECTED** box with a body
-outline. It also carries a case number, a timestamp, the event name and thescouts.io.
+1080×1440 (Instagram's 3:4 portrait), framed like Out of Frame's collage: "Drone Booth" header with the
+event and date, the camera shot (cropped around the people in it) as a rounded panel, and
+"Scouts Drone Booth" / thescouts.io at the bottom. The shot has a security-cam look: every person gets a
+red **THREAT DETECTED** box with a body outline, plus a case number and timestamp.
 The booth screen then shows the photo next to a **QR code** until `SPACE` (next visitor) or `R` (retake).
 
 Scanning the QR opens a page on the visitor's phone. It shows a blurred preview and a form

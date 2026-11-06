@@ -382,8 +382,8 @@ class Game:
             if qr is not None:
                 R.rounded_rect(canvas, (x - p, y - p, x + q + p, y + q + p), R.WHITE, p * 2)
                 canvas[y:y + q, x:x + q] = cv2.resize(qr, (q, q), interpolation=cv2.INTER_NEAREST)
-            R.text(canvas, soc["name"], (x + q // 2, y + q + p + 34), 1.0, self.cfg.display.accent,
-                   font=R.FONT_SEMIBOLD)
+            R.icon_label(canvas, soc.get("icon"), soc["name"], (x + q // 2, y + q + p + 34), 1.0,
+                         self.cfg.display.accent)
             R.text(canvas, soc["handle"], (x + q // 2, y + q + p + 72), 0.85, R.WHITE,
                    font=R.FONT_REGULAR)
             x += q + gap
@@ -511,34 +511,34 @@ class Game:
         self._draw_final(canvas, now, dt)
 
     def _draw_final(self, canvas: np.ndarray, now: float, dt: float) -> None:
-        """The collage on the left; result, prize code and the download QR on the right."""
+        """The 3:4 collage on the left; result, prize code and the download QR in a column on
+        the right (same layout as the drone booth's review screen)."""
         d = self.cfg.display
         W, H = d.width, d.height
         canvas[:] = R.INK
-        right = W // 2
         if self.collage is not None:
-            x1, y1, x2, y2 = R.paste_fit(canvas, self.collage, (60, 40, W // 2 - 40, H - 40))
+            x1, y1, x2, y2 = R.paste_fit(canvas, self.collage, (90, 60, 810, H - 60))
             R.rounded_rect(canvas, (x1 - 3, y1 - 3, x2 + 3, y2 + 3), R.CHARCOAL, 8, thickness=3)
-            right = x2 + 60
-        cx = (right + W - 60) // 2
+        cx = (900 + W - 90) // 2
         if self.won:
-            R.text(canvas, "YOU WIN!", (cx, int(H * 0.11)), 3.2, R.GREEN, font=R.FONT_BOLD)
-            R.text(canvas, "Not in a single photo. Show this code for your prize:",
-                   (cx, int(H * 0.19)), 1.0, R.WHITE, font=R.FONT_REGULAR)
-            R.button(canvas, self.win_code, (cx, int(H * 0.265)), 1.6, bg=R.GREEN)
+            R.text(canvas, "YOU WIN!", (cx, 140), 2.8, R.GREEN, font=R.FONT_BOLD)
+            R.text(canvas, "Not in a single photo. Show this code for your prize:", (cx, 205), 1.0,
+                   R.SILVER, font=R.FONT_REGULAR, shadow=False)
+            R.button(canvas, self.win_code, (cx, 280), 1.4, bg=R.GREEN)
         else:
             caught = sum(s.verdict.caught for s in self.shots)
-            R.text(canvas, "Caught by Scouts!", (cx, int(H * 0.11)), 2.8, R.RED, font=R.FONT_BOLD)
-            R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos.",
-                   (cx, int(H * 0.19)), 1.1, R.WHITE, font=R.FONT_REGULAR)
+            R.text(canvas, "Caught by Scouts!", (cx, 175), 2.6, R.RED, font=R.FONT_BOLD)
+            R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos.", (cx, 245),
+                   1.1, R.SILVER, font=R.FONT_REGULAR, shadow=False)
         if self.share_qr is not None:
             q = self.share_qr.shape[0]
-            qy = int(H * 0.34)
-            R.text(canvas, "Scan to get your photo", (cx, qy), 1.4, d.accent, font=R.FONT_SEMIBOLD)
-            top = qy + 40
-            R.rounded_rect(canvas, (cx - q // 2 - 22, top, cx + q // 2 + 22, top + q + 44), R.WHITE, 20)
-            canvas[top + 22:top + 22 + q, cx - q // 2:cx - q // 2 + q] = self.share_qr
-            R.text(canvas, self.share_url, (cx, top + q + 80), 0.6, R.GREY, font=R.FONT_REGULAR,
+            top = 400
+            R.text(canvas, "Scan to get your photo", (cx, top), 1.35, d.accent, font=R.FONT_SEMIBOLD,
                    shadow=False)
-        R.text(canvas, "SPACE: back to start   ·   Q: quit", (cx, H - 60), 0.9,
-               R.SILVER, font=R.FONT_REGULAR, shadow=False)
+            y = top + 40
+            R.rounded_rect(canvas, (cx - q // 2 - 24, y, cx + q // 2 + 24, y + q + 48), R.WHITE, 22)
+            canvas[y + 24:y + 24 + q, cx - q // 2:cx - q // 2 + q] = self.share_qr
+            R.text(canvas, "Point your phone camera at the code", (cx, y + q + 98), 0.8, R.GREY,
+                   font=R.FONT_REGULAR, shadow=False)
+        R.text(canvas, "SPACE: back to start   ·   Q: quit", (cx, H - 70), 0.85, R.SILVER,
+               font=R.FONT_REGULAR, shadow=False)

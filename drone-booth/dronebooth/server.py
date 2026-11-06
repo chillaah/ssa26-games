@@ -88,7 +88,7 @@ PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<title>Caught by Scouts</title>
+<title>Scouts Drone Booth</title>
 <style>
   @font-face {{ font-family: Poppins; font-weight: 400; font-display: swap;
                src: url(/brand/fonts/Poppins-Regular.ttf) format("truetype"); }}
@@ -145,7 +145,7 @@ def form_page(pid: str, cfg: ShareCfg, error: str = "", values: Optional[dict] =
     heading = ("Enter your details to download your photo." if cfg.require_details
                else "Your photo is ready. Leave your details to stay in touch.")
     return PAGE.format(body=f"""
-<h1>Caught by Scouts</h1>
+<h1>Scouts Drone Booth</h1>
 <p>{heading}</p>
 <img class="photo" src="/img/{pid}_teaser.jpg" alt="Blurred preview of your photo">
 <form method="post" action="/p/{pid}">
@@ -171,17 +171,17 @@ def photo_page(pid: str, name: str = "") -> str:
     return PAGE.format(body=f"""
 <h1>{hello}</h1>
 <p>Press and hold the photo to save it, or use the buttons below.</p>
-<img class="photo" src="/img/{pid}.jpg" alt="Your Caught by Scouts photo">
+<img class="photo" src="/img/{pid}.jpg" alt="Your Scouts Drone Booth photo">
 <button id="share" type="button">Share</button>
-<a class="btn secondary" href="/img/{pid}.jpg" download="caught-by-scouts.jpg">Download</a>
+<a class="btn secondary" href="/img/{pid}.jpg" download="scouts-drone-booth.jpg">Download</a>
 <script>
   const btn = document.getElementById('share');
   btn.addEventListener('click', async () => {{
     try {{
       const blob = await (await fetch('/img/{pid}.jpg')).blob();
-      const file = new File([blob], 'caught-by-scouts.jpg', {{ type: 'image/jpeg' }});
+      const file = new File([blob], 'scouts-drone-booth.jpg', {{ type: 'image/jpeg' }});
       if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
-        await navigator.share({{ files: [file], title: 'Caught by Scouts',
+        await navigator.share({{ files: [file], title: 'Scouts Drone Booth',
                                  text: 'I got caught by The Scouts drone at Safety & Security Asia!' }});
       }} else {{ window.location = '/img/{pid}.jpg'; }}
     }} catch (e) {{ /* share sheet dismissed */ }}
@@ -235,7 +235,7 @@ def make_handler(store: PhotoStore, cfg: ShareCfg):
                                                         "Scan the QR code on the booth screen again."))
                 return self._html(200, form_page(pid, cfg))
             if path == "/":
-                return self._html(200, message_page("Caught by Scouts",
+                return self._html(200, message_page("Scouts Drone Booth",
                                                     "Visit The Scouts booth to get caught by our drone."))
             self._html(404, message_page("Not found", ""))
 

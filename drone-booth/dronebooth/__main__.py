@@ -16,7 +16,7 @@ from .window import GameWindow, quit_on_signals
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Caught by Scouts - dronebooth")
+    ap = argparse.ArgumentParser(description="Scouts Drone Booth")
     ap.add_argument("--config", default="configs/booth_mac.yaml")
     ap.add_argument("--source", help="override camera source (index, rtsp://, gst:..., file)")
     ap.add_argument("--fullscreen", action="store_true")

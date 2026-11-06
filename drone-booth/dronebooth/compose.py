@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Optional, Sequence, Tuple
 
 import cv2
@@ -156,33 +157,63 @@ def portrait_crop(frame: np.ndarray, people: List[Person],
     return img, moved
 
 
-def compose_photo(frame: np.ndarray, people: List[Person], meta: PhotoMeta,
-                  max_subjects: int = 6) -> np.ndarray:
-    """The souvenir photo, 3:4 portrait (PHOTO_SIZE)."""
-    frame, people = portrait_crop(frame, people)
-    img = surveillance_grade(frame)
-    u = _u(img)
+# Souvenir layout (same frame as Out of Frame's collage): header, the photo panel, footer.
+PANEL = (60, 222, 1020, 1290)  # x1, y1, x2, y2 of the camera shot on the PHOTO_SIZE canvas
+_BACKGROUND: Optional[np.ndarray] = None
+
+
+def background() -> np.ndarray:
+    """Ink page with a soft Ebony glow behind the header (drawn small and scaled up: fast)."""
+    global _BACKGROUND
+    if _BACKGROUND is None:
+        W, H = PHOTO_SIZE
+        k = 8
+        glow = np.zeros((H // k, W // k, 3), np.uint8)
+        cv2.ellipse(glow, (W // k // 2, 0), (W // k, 420 // k), 0, 0, 360, R.EBONY_DEEP, -1)
+        glow = cv2.resize(cv2.GaussianBlur(glow, (0, 0), 120 / k), (W, H),
+                          interpolation=cv2.INTER_CUBIC)
+        _BACKGROUND = cv2.addWeighted(np.full((H, W, 3), R.INK, np.uint8), 1.0, glow, 0.9, 0)
+    return _BACKGROUND
+
+
+def paste_rounded(canvas: np.ndarray, img: np.ndarray, org: Tuple[int, int], radius: int) -> None:
+    x, y = org
     h, w = img.shape[:2]
-    draw_subjects(img, people, "THREAT DETECTED", THREAT, max_subjects)
-    hud_frame(img, "SCOUTS AUTONOMOUS DRONES  //  DRONE CAM 01", f"{meta.timestamp}   CASE {meta.case_id}")
+    mask = np.zeros((h, w), np.uint8)
+    r = min(radius, w // 2, h // 2)
+    cv2.rectangle(mask, (r, 0), (w - r - 1, h - 1), 255, -1)
+    cv2.rectangle(mask, (0, r), (w - 1, h - r - 1), 255, -1)
+    for cx, cy in ((r, r), (w - r - 1, r), (r, h - r - 1), (w - r - 1, h - r - 1)):
+        cv2.circle(mask, (cx, cy), r, 255, -1, cv2.LINE_AA)
+    a = (mask.astype(np.float32) / 255.0)[..., None]
+    roi = canvas[y:y + h, x:x + w]
+    roi[:] = (img * a + roi * (1 - a)).astype(np.uint8)
 
-    # bottom ribbon: logo | Caught by Scouts ............ event / website
-    rib = int(84 * u)
-    _alpha_rect(img, (0, h - rib, w, h), R.INK, 0.72)
-    cv2.rectangle(img, (0, h - rib), (w, h - rib + max(2, int(3 * u))), R.EBONY, -1)
-    mid = h - rib // 2
-    _, _, lx2, _ = R.logo(img, "horizontal-white", (int(30 * u), mid), int(46 * u), anchor="left")
-    cv2.line(img, (lx2 + int(22 * u), mid - int(22 * u)), (lx2 + int(22 * u), mid + int(22 * u)),
-             R.GREY, max(1, int(2 * u)), cv2.LINE_AA)
-    R.text(img, "Caught by Scouts", (lx2 + int(44 * u), mid + int(14 * u)), 1.2 * u, R.WHITE,
-           anchor="left", font=R.FONT_BOLD, shadow=False)
-    R.text(img, meta.event, (w - int(30 * u), mid - int(5 * u)), 0.6 * u, HUD, anchor="right",
-           font=R.FONT, shadow=False)
-    R.text(img, meta.website, (w - int(30 * u), mid + int(25 * u)), 0.6 * u, R.DUTCH, anchor="right",
-           font=R.FONT_SEMIBOLD, shadow=False)
 
-    # status pill just above the ribbon, clear of the subject tags at the top
+def compose_photo(frame: np.ndarray, people: List[Person], meta: PhotoMeta,
+                  max_subjects: int = 6, when: Optional[datetime] = None) -> np.ndarray:
+    """The souvenir photo: PHOTO_SIZE (1080 x 1440, Instagram's 3:4 portrait)."""
+    x1, y1, x2, y2 = PANEL
+    shot, people = portrait_crop(frame, people, (x2 - x1, y2 - y1))
+    shot = surveillance_grade(shot)
+    u = _u(shot)
+    draw_subjects(shot, people, "THREAT DETECTED", THREAT, max_subjects)
+    hud_frame(shot, "SCOUTS AUTONOMOUS DRONES  //  DRONE CAM 01",
+              f"{meta.timestamp}   CASE {meta.case_id}")
     n = min(len(people), max_subjects)
     status = f"THREAT DETECTED  \u00b7  {n} SUBJECT{'S' if n != 1 else ''} IDENTIFIED"
-    R.button(img, status, (w // 2, h - rib - int(36 * u)), 0.72 * u, bg=THREAT, fg=R.WHITE)
+    R.button(shot, status, ((x2 - x1) // 2, (y2 - y1) - int(46 * u)), 0.72 * u, bg=THREAT,
+             fg=R.WHITE)
+
+    W, H = PHOTO_SIZE
+    img = background().copy()
+    R.logo(img, "horizontal-white", (W // 2, 60), 46)
+    R.text(img, "Drone Booth", (W // 2, 136), 2.3, R.WHITE, font=R.FONT_BOLD)
+    when = when or datetime.now()
+    sub = "  \u00b7  ".join(x for x in (meta.event.title(), when.strftime("%-d %b %Y")) if x)
+    R.text(img, sub, (W // 2, 188), 0.8, R.SILVER, font=R.FONT_REGULAR, shadow=False)
+    paste_rounded(img, shot, (x1, y1), 24)
+    R.text(img, "Scouts Drone Booth", (W // 2, (y2 + H - 46) // 2), 1.2, R.DUTCH, font=R.FONT_BOLD)
+    R.text(img, f"{meta.website}  \u00b7  Scouts Autonomous Drones", (W // 2, H - 34), 0.72,
+           R.SILVER, font=R.FONT, shadow=False)
     return img

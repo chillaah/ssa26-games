@@ -30,10 +30,20 @@ class DetectorCfg:
 
 @dataclass
 class DisplayCfg:
-    window_name: str = "Caught by Scouts - Dronebooth"
+    window_name: str = "Drone Booth - The Scouts"
     fullscreen: bool = False
     width: int = 1920
     height: int = 1080
+    # QR codes for The Scouts' socials, in the bottom corners of the live screen (same as
+    # Out of Frame's attract screen). icon = assets/brand/logos/<icon>.png.
+    socials: list = field(default_factory=lambda: [
+        {"name": "Instagram", "handle": "@thescouts.io",
+         "url": "https://www.instagram.com/thescouts.io/", "qr": "assets/qr_instagram.png",
+         "icon": "instagram"},
+        {"name": "LinkedIn", "handle": "Scouts - Autonomous Drones",
+         "url": "https://www.linkedin.com/company/scoutsapp/posts/", "qr": "assets/qr_linkedin.png",
+         "icon": "linkedin"},
+    ])
 
 
 @dataclass

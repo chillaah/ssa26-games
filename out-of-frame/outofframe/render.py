@@ -148,3 +148,16 @@ def card(canvas: np.ndarray, img: Optional[np.ndarray], rect: Sequence[int], lab
     if border != WHITE:
         rounded_rect(canvas, rect, border, radius, thickness=5)
     return shown
+
+
+def icon_label(img: np.ndarray, icon: Optional[str], label: str, center: Tuple[int, int],
+               scale: float, color: Color) -> None:
+    """A label with a small logo (assets/brand/logos/<icon>.png) in front, centred as a group."""
+    tw, cap = text_size(label, scale, FONT_SEMIBOLD)
+    size = int(cap * 1.6)
+    gap = int(cap * 0.5) if icon else 0
+    x = center[0] - (tw + (size + gap if icon else 0)) // 2
+    if icon:
+        logo(img, icon, (x, center[1]), size, anchor="left")
+        x += size + gap
+    text(img, label, (x, center[1] + cap // 2), scale, color, anchor="left", font=FONT_SEMIBOLD)

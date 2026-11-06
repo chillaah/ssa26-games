@@ -1,1 +1,1 @@
-"""Caught by Scouts: the drone photobooth."""
+"""Scouts Drone Booth: the drone photobooth."""

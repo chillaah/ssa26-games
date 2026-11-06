@@ -2,7 +2,7 @@
 Text, colours and logos come from brand.py (The Scouts brand: Poppins, Ebony/Dutch/Powder)."""
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -36,3 +36,16 @@ def paste_fit(canvas: np.ndarray, img: np.ndarray, rect: Tuple[int, int, int, in
     px, py = x1 + ox, y1 + oy
     canvas[py:py + h, px:px + w] = resized
     return px, py, px + w, py + h
+
+
+def icon_label(img: np.ndarray, icon: Optional[str], label: str, center: Tuple[int, int],
+               scale: float, color: Color) -> None:
+    """A label with a small logo (assets/brand/logos/<icon>.png) in front, centred as a group."""
+    tw, cap = text_size(label, scale, FONT_SEMIBOLD)
+    size = int(cap * 1.6)
+    gap = int(cap * 0.5) if icon else 0
+    x = center[0] - (tw + (size + gap if icon else 0)) // 2
+    if icon:
+        logo(img, icon, (x, center[1]), size, anchor="left")
+        x += size + gap
+    text(img, label, (x, center[1] + cap // 2), scale, color, anchor="left", font=FONT_SEMIBOLD)

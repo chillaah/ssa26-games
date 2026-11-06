@@ -132,12 +132,15 @@ class DisplayCfg:
     # BGR. Default is the brand's Dutch (#ffefca); see outofframe/brand.py for the palette.
     accent: tuple = (202, 239, 255)
     show_live_detections: bool = False  # debug overlay, toggle with "d"
-    # Shown with QR codes on the attract screen. Regenerate the QR images with tools/make_qr.py.
+    # Shown with QR codes on the attract screen. Regenerate the QR images with tools/make_qr.py;
+    # icon = assets/brand/logos/<icon>.png (tools/make_social_icons.py).
     socials: list = field(default_factory=lambda: [
         {"name": "Instagram", "handle": "@thescouts.io",
-         "url": "https://www.instagram.com/thescouts.io/", "qr": "assets/qr_instagram.png"},
+         "url": "https://www.instagram.com/thescouts.io/", "qr": "assets/qr_instagram.png",
+         "icon": "instagram"},
         {"name": "LinkedIn", "handle": "Scouts - Autonomous Drones",
-         "url": "https://www.linkedin.com/company/scoutsapp/posts/", "qr": "assets/qr_linkedin.png"},
+         "url": "https://www.linkedin.com/company/scoutsapp/posts/", "qr": "assets/qr_linkedin.png",
+         "icon": "linkedin"},
     ])
 
 

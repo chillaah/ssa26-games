@@ -45,6 +45,15 @@ class Shot:
     verdict: ShotVerdict
 
 
+def _card_height_for(width: int, aspect: float, max_h: int) -> int:
+    """Height of an R.card of this width whose photo area has this aspect (w/h), capped at max_h."""
+    for ch in range(1, max_h + 1):
+        x = R.card_photo_rect((0, 0, width, ch))
+        if (x[3] - x[1]) * aspect >= x[2] - x[0]:
+            return ch
+    return max_h
+
+
 class Game:
     def __init__(self, cfg: Config, framer: Framer, detector: PersonDetector,
                  rng: Optional[random.Random] = None, poser: Optional[PoseEstimator] = None,
@@ -77,7 +86,7 @@ class Game:
         self.collage: Optional[np.ndarray] = None
         self.share_url = ""
         self.share_qr: Optional[np.ndarray] = None
-        self._bonus_bg: Optional[Tuple[np.ndarray, Tuple[int, int, int, int], int]] = None
+        self._bonus_bg: Optional[Tuple[np.ndarray, Tuple[int, int, int, int], int, float]] = None
         C.background()  # build the collage backdrop now, not at the end of the first game
         self._socials = []  # (social, QR image) shown on the attract screen
         for soc in cfg.display.socials:
@@ -426,7 +435,8 @@ class Game:
         d = self.cfg.display
         W, H = d.width, d.height
         g = self.cfg.game
-        if self._bonus_bg is None:
+        aspect = frame.shape[1] / frame.shape[0]
+        if self._bonus_bg is None or self._bonus_bg[3] != aspect:
             # Everything but the live camera and the countdown stays put: draw it once
             # (the big rounded cards cost ~100 ms a frame on the Jetson).
             bg = np.empty_like(canvas)
@@ -434,16 +444,19 @@ class Game:
             R.logo(bg, d.logo, (60, 70), 56, anchor="left")
             R.text(bg, "Copy this pose for your souvenir photo!", (W // 2, int(H * 0.155)), 1.3,
                    R.WHITE, font=R.FONT_REGULAR)
-            top = int(H * 0.2)
-            R.card(bg, self._gallery_image(self.bonus_item), (60, top, W // 2 - 30, H - 50),
+            # Cards as tall as the camera picture needs (whole view, no bars, no zoom),
+            # centred in the space under the heading.
+            top, bottom = int(H * 0.2), H - 50
+            ch = _card_height_for(W // 2 - 90, aspect, bottom - top)
+            y1 = top + (bottom - top - ch) // 2
+            R.card(bg, self._gallery_image(self.bonus_item), (60, y1, W // 2 - 30, y1 + ch),
                    self.bonus_item.name, d.accent, fill=True, keep=self.bonus_item.pose.bbox)
-            you = (W // 2 + 30, top, W - 60, H - 50)
+            you = (W // 2 + 30, y1, W - 60, y1 + ch)
             inner = R.card(bg, None, you, "YOU", R.WHITE)
-            self._bonus_bg = (bg, inner, R.card_inner_radius(you))
-        bg, inner, radius = self._bonus_bg
+            self._bonus_bg = (bg, inner, R.card_inner_radius(you), aspect)
+        bg, inner, radius, _ = self._bonus_bg
         np.copyto(canvas, bg)
-        # Fill the card (sides cropped) instead of letterboxing: no black bars above and below.
-        live = R.paste_fill(canvas, frame, inner, radius)
+        live = R.paste_fill(canvas, frame, inner, radius)  # same shape as the card: nothing cropped
         pop = min(1.0, dt / 0.3) if self.state == BONUS else 1.0
         R.text(canvas, "BONUS ROUND", (W // 2, int(H * 0.085)), 2.6 + 0.8 * (1 - pop), d.accent,
                font=R.FONT_BOLD)

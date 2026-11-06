@@ -94,6 +94,14 @@ def _corner_mask(w: int, h: int, r: int) -> np.ndarray:
     return _corner_masks[key]
 
 
+def card_photo_rect(rect: Sequence[int]) -> Tuple[int, int, int, int]:
+    """The photo area card() draws in rect (inside the border, above the caption strip)."""
+    x1, y1, x2, y2 = rect
+    pad = max(6, (x2 - x1) // 30)
+    cap = max(28, (y2 - y1) // 7)
+    return x1 + pad, y1 + pad, x2 - pad, y2 - cap
+
+
 def card_inner_radius(rect: Sequence[int]) -> int:
     """Corner radius of the photo area card() draws in rect."""
     x1, _, x2, _ = rect
@@ -198,7 +206,7 @@ def card(canvas: np.ndarray, img: Optional[np.ndarray], rect: Sequence[int], lab
     rounded_rect(canvas, rect, WHITE, radius)
     pad = max(6, (x2 - x1) // 30)
     cap = max(28, (y2 - y1) // 7)
-    inner = (x1 + pad, y1 + pad, x2 - pad, y2 - cap)
+    inner = card_photo_rect(rect)
     rounded_rect(canvas, inner, CHARCOAL, card_inner_radius(rect))
     shown = inner
     if img is not None:

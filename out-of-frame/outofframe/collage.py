@@ -32,6 +32,23 @@ GREEN = B.CLEAR
 RED = B.ALERT
 
 
+_BACKGROUND: Optional[np.ndarray] = None
+
+
+def background() -> np.ndarray:
+    """Ink page with a soft Ebony glow behind the header. Built once: a full-size blur this wide
+    takes seconds on the Jetson, so it's drawn at 1/8 size, blurred and scaled up."""
+    global _BACKGROUND
+    if _BACKGROUND is None:
+        k = 8
+        glow = np.zeros((H // k, W // k, 3), np.uint8)
+        cv2.ellipse(glow, (W // k // 2, 0), (W // k, 520 // k), 0, 0, 360, B.EBONY_DEEP, -1)
+        glow = cv2.resize(cv2.GaussianBlur(glow, (0, 0), 120 / k), (W, H),
+                          interpolation=cv2.INTER_CUBIC)
+        _BACKGROUND = cv2.addWeighted(np.full((H, W, 3), B.INK, np.uint8), 1.0, glow, 0.9, 0)
+    return _BACKGROUND
+
+
 def qr_image(url: str, size: int) -> np.ndarray:
     import qrcode
 
@@ -100,6 +117,15 @@ def shot_label(verdict) -> Tuple[str, tuple]:
     return "DODGED", GREEN
 
 
+def players(boxes: Sequence[Tuple[int, int, int, int]], min_rel: float = 0.5):
+    """The people posing: anyone at least min_rel as tall as the tallest person in view.
+    Smaller (further away) people, e.g. someone at a desk behind, are left out of the framing."""
+    if not boxes:
+        return []
+    tallest = max(b[3] - b[1] for b in boxes)
+    return [b for b in boxes if b[3] - b[1] >= min_rel * tallest]
+
+
 def bonus_crop(frame: np.ndarray, boxes: Sequence[Tuple[int, int, int, int]],
                aspect: float = BONUS_ASPECT) -> np.ndarray:
     """Crop the bonus photo to the panel's shape, around the people in it (or the centre)."""
@@ -114,6 +140,10 @@ def bonus_crop(frame: np.ndarray, boxes: Sequence[Tuple[int, int, int, int]],
         cx, cy, h = fw / 2, fh / 2, fh
     h = min(h, fh, fw / aspect)
     w = h * aspect
+    if boxes and max(b[2] for b in boxes) - min(b[0] for b in boxes) > w:
+        # The group doesn't fit: centre on the main player (the biggest person) instead.
+        main = max(boxes, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
+        cx = (main[0] + main[2]) / 2
     x = int(min(max(cx - w / 2, 0), fw - w))
     y = int(min(max(cy - h / 2, 0), fh - h))
     return frame[y:y + int(h), x:x + int(w)].copy()
@@ -123,11 +153,7 @@ def compose(shots: List, bonus_photo: Optional[np.ndarray], bonus_ref: Optional[
             won: bool, event: str = "", logo: str = "horizontal-white",
             accent=B.DUTCH, when: Optional[datetime] = None) -> np.ndarray:
     """shots: the dodge Shot objects (photo + verdict). Returns the BGR collage (H x W)."""
-    img = np.full((H, W, 3), B.INK, np.uint8)
-    # Soft Ebony glow behind the header.
-    glow = np.zeros_like(img)
-    cv2.ellipse(glow, (W // 2, 0), (W, 520), 0, 0, 360, B.EBONY_DEEP, -1)
-    img[:] = cv2.addWeighted(img, 1.0, cv2.GaussianBlur(glow, (0, 0), 120), 0.9, 0)
+    img = background().copy()
 
     B.logo(img, logo, (W // 2, 92), 64)
     B.text(img, "Out of Frame", (W // 2, 196), 2.9, B.WHITE, font=B.BOLD)

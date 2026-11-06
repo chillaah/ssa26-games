@@ -389,3 +389,17 @@ def test_four_dodge_rounds_then_bonus_pose_then_collage_and_qr(tmp_path):
         game.step(t + 0.05, frame)  # results screen draws
     finally:
         share.stop()
+
+
+def test_bonus_crop_frames_the_players_not_the_background():
+    from outofframe.collage import BONUS_ASPECT, bonus_crop, players
+
+    near, also_near, far = (900, 100, 1200, 720), (600, 150, 880, 720), (100, 300, 180, 450)
+    assert players([near, also_near, far]) == [near, also_near]
+    frame = np.zeros((720, 1280, 3), np.uint8)
+    crop = bonus_crop(frame, players([near, far]))
+    assert abs(crop.shape[1] / crop.shape[0] - BONUS_ASPECT) < 0.01
+    # A group wider than the photo: centred on the biggest person (marked white here).
+    frame[:, 600:1270] = 255
+    crop = bonus_crop(frame, [(560, 0, 1280, 720), (0, 280, 190, 650)])
+    assert crop[:, -50:].mean() > 200

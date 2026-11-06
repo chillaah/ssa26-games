@@ -77,6 +77,7 @@ class Game:
         self.collage: Optional[np.ndarray] = None
         self.share_url = ""
         self.share_qr: Optional[np.ndarray] = None
+        C.background()  # build the collage backdrop now, not at the end of the first game
         self._socials = []  # (social, QR image) shown on the attract screen
         for soc in cfg.display.socials:
             qr = cv2.imread(soc["qr"])
@@ -195,7 +196,7 @@ class Game:
 
     def _snap_bonus(self, frame: np.ndarray) -> None:
         people = self.detector.detect(frame)
-        self.bonus_photo = C.bonus_crop(frame, [p.bbox for p in people])
+        self.bonus_photo = C.bonus_crop(frame, C.players([p.bbox for p in people]))
         if self.session_dir:
             self.session_dir.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(self.session_dir / "bonus.jpg"), self.bonus_photo)

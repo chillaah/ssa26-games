@@ -22,7 +22,8 @@ Two ways to run it, sharing the same code:
 3. **4 photos** (`game.shots`). For each one, the frame moves through 1–3 random waypoints ("feints").
    Then it **locks on**: the box goes yellow, then flashes red, with a progress bar.
    Then it **snaps**. Every round gets faster and the box gets bigger.
-4. **Bonus round** (`game.bonus_pose`). A random `gallery/` picture is shown next to the live camera:
+4. **Bonus round** (`game.bonus_pose`). A random picture from `gallery/bonus.txt` (66 poses a visitor
+   can copy standing up: no upside-down, airborne, floor or partner poses) is shown next to the live camera:
    "Copy this pose!". After `game.bonus_s` (6 s, with a 3-2-1) the camera takes one photo, cropped
    around the players. The pose isn't scored. Pictures don't repeat for the next 30 games.
 5. **Developing photos.** The 4 photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
@@ -59,6 +60,8 @@ The most similar picture is always shown, even if it was shown before.
   `gallery/index.json`. Images with no person found are skipped.
 - For a picture the pose model can't read (an animal, a letter), write its keypoints into `index.json`
   by hand with `"manual": true`.
+- `gallery/bonus.txt` lists the pictures the bonus round may show, one file name per line. Add a new
+  picture there only if anyone could copy it in the booth.
 - Check a photo against the gallery: `python -m outofframe.pose --test photo.jpg`
 - No picture is shown when the player is just standing still (`pose.max_neutral`): players are asked to
   strike a pose at every snap.

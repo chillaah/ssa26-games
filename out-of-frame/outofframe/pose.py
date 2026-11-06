@@ -173,10 +173,20 @@ class PoseEstimator:
 
 class Gallery:
     INDEX = "index.json"
+    BONUS = "bonus.txt"  # pictures the bonus round may show (doable poses); missing = all
 
-    def __init__(self, folder: Path, items: List[GalleryItem]):
+    def __init__(self, folder: Path, items: List[GalleryItem],
+                 bonus_items: Optional[List[GalleryItem]] = None):
         self.folder = folder
         self.items = items
+        self.bonus_items = items if bonus_items is None else bonus_items
+
+    @staticmethod
+    def _read_list(path: Path) -> Optional[set]:
+        if not path.exists():
+            return None
+        lines = (ln.strip() for ln in path.read_text().splitlines())
+        return {ln for ln in lines if ln and not ln.startswith("#")}
 
     @classmethod
     def load(cls, folder, estimator: Optional[PoseEstimator]) -> "Gallery":
@@ -212,7 +222,16 @@ class Gallery:
         if (changed or stale) and folder.is_dir():
             index_path.write_text(json.dumps(cache, indent=1))
         log.info("Gallery: %d usable images in %s", len(items), folder)
-        return cls(folder, items)
+        allowed = cls._read_list(folder / cls.BONUS)
+        bonus = None
+        if allowed is not None:
+            bonus = [i for i in items if i.path.name in allowed]
+            missing = allowed - {i.path.name for i in items}
+            if missing:
+                log.warning("Gallery: %s lists pictures that aren't usable: %s", cls.BONUS,
+                            ", ".join(sorted(missing)))
+            log.info("Gallery: %d pictures allowed in the bonus round", len(bonus))
+        return cls(folder, items, bonus)
 
     def best(self, pose: Pose, min_conf: float = 0.3,
              exclude=()) -> Tuple[Optional[GalleryItem], float, bool]:

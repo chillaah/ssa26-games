@@ -177,7 +177,7 @@ class Game:
         self.round += 1
         if self.round < self.cfg.game.shots:
             self._begin_round(now, size)
-        elif self.cfg.game.bonus_pose and self.gallery is not None:
+        elif self.cfg.game.bonus_pose and self.gallery is not None and self.gallery.bonus_items:
             self.bonus_item = self._pick_bonus()
             self._bonus_bg = None
             log.info("bonus round: %s", self.bonus_item.path.name)
@@ -191,8 +191,9 @@ class Game:
         self._set(REVEAL, now)
 
     def _pick_bonus(self) -> GalleryItem:
-        fresh = [i for i in self.gallery.items if i.path not in self._recent_bonus]
-        item = self.rng.choice(fresh or self.gallery.items)
+        pool = self.gallery.bonus_items
+        fresh = [i for i in pool if i.path not in self._recent_bonus]
+        item = self.rng.choice(fresh or pool)
         self._recent_bonus.append(item.path)
         return item
 

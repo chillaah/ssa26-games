@@ -411,3 +411,37 @@ def test_bonus_crop_frames_the_players_not_the_background():
     frame[:, 600:1270] = 255
     crop = bonus_crop(frame, [(560, 0, 1280, 720), (0, 280, 190, 650)])
     assert crop[:, -50:].mean() > 200
+
+
+def test_bonus_round_only_picks_listed_doable_pictures(tmp_path):
+    import json
+
+    import cv2
+
+    from outofframe import game as G
+    from outofframe.config import Config
+    from outofframe.pose import Gallery
+
+    k, c = _pose_kpts()
+    names = ("tree_pose_1", "gymnast_2", "scarecrow_1")
+    for n in names:
+        cv2.imwrite(str(tmp_path / f"{n}.jpg"), np.zeros((8, 8, 3), np.uint8))
+    (tmp_path / "index.json").write_text(json.dumps({f"{n}.jpg": {
+        "manual": True, "kpts": k.tolist(), "conf": c.tolist(), "bbox": [0, 0, 8, 8]} for n in names}))
+    (tmp_path / "bonus.txt").write_text("# doable\ntree_pose_1.jpg\n\nscarecrow_1.jpg\n")
+    gallery = Gallery.load(tmp_path, None)
+    assert len(gallery.items) == 3
+    assert {i.path.stem for i in gallery.bonus_items} == {"tree_pose_1", "scarecrow_1"}
+    game = G.Game(Config(), VirtualFramer(VirtualFramerCfg()), None, rng=random.Random(0),
+                  gallery=gallery)
+    assert {game._pick_bonus().path.stem for _ in range(20)} == {"tree_pose_1", "scarecrow_1"}
+
+
+def test_shipped_bonus_list_matches_the_gallery():
+    from pathlib import Path
+
+    from outofframe.pose import Gallery
+
+    gallery = Gallery.load(Path(__file__).resolve().parent.parent / "gallery", None)
+    assert 40 <= len(gallery.bonus_items) < len(gallery.items)
+    assert not any("gymnast" in i.path.stem or "handstand" in i.path.stem for i in gallery.bonus_items)

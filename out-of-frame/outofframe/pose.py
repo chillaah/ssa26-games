@@ -152,7 +152,9 @@ class PoseEstimator:
     def detect(self, image: np.ndarray) -> List[Pose]:
         kw = dict(conf=self.cfg.conf, verbose=False)
         if self.half:
-            kw["half"] = True
+            from .detector import fp16_kwargs
+
+            kw.update(fp16_kwargs())
         if self.device is not None:
             kw["device"] = self.device
         r = self.model.predict(image, **kw)[0]
@@ -190,7 +192,9 @@ class Gallery:
             entry = cache.get(path.name)
             mtime = path.stat().st_mtime
             # "manual" entries hold hand-placed keypoints (e.g. a bear or a letter) and are kept as is.
-            stale_entry = entry is None or (not entry.get("manual") and entry.get("mtime") != mtime)
+            # Within a second counts as unchanged: copying to the Jetson can drop sub-second mtimes.
+            stale_entry = entry is None or (not entry.get("manual") and (
+                entry.get("mtime") is None or abs(entry["mtime"] - mtime) >= 1.0))
             if stale_entry and estimator is not None:
                 img = cv2.imread(str(path))
                 pose = estimator.player(img) if img is not None else None

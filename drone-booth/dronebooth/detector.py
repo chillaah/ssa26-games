@@ -15,6 +15,14 @@ log = logging.getLogger(__name__)
 PERSON = 0
 
 
+def fp16_kwargs() -> dict:
+    """predict() arguments for FP16. Newer Ultralytics renamed half=True to quantize=16 and warns
+    on every call that still uses half."""
+    from ultralytics.cfg import DEFAULT_CFG_DICT
+
+    return {"quantize": 16} if "quantize" in DEFAULT_CFG_DICT else {"half": True}
+
+
 @dataclass
 class Person:
     bbox: Tuple[int, int, int, int]
@@ -38,7 +46,7 @@ class PersonDetector:
     def detect(self, frame: np.ndarray) -> List[Person]:
         kw = dict(classes=[PERSON], conf=self.cfg.conf, imgsz=self.cfg.imgsz, verbose=False)
         if self.cfg.half:
-            kw["half"] = True
+            kw.update(fp16_kwargs())
         if self.cfg.device is not None:
             kw["device"] = self.cfg.device
         result = self.model.predict(frame, **kw)[0]

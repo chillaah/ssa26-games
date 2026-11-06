@@ -11,9 +11,7 @@ from dronebooth.server import PhotoStore, ShareServer
 
 
 def _person():
-    mask = np.zeros((720, 1280), bool)
-    mask[200:700, 500:700] = True
-    return Person((500, 200, 700, 700), 0.9, mask)
+    return Person((500, 200, 700, 700), 0.9)
 
 
 def test_configs_load():
@@ -27,13 +25,11 @@ def test_compose_is_3_by_4_portrait_around_the_people():
     frame = np.full((720, 1280, 3), 120, np.uint8)
     meta = PhotoMeta("0001-01", "2026-11-04 10:00:00 SGT", "EVENT", "thescouts.io")
     assert compose_photo(frame, [_person()], meta).shape == (1440, 1080, 3)
-    # Someone near the right edge stays in the picture, box and mask moved with the crop.
-    mask = np.zeros((720, 1280), bool)
-    mask[100:700, 1100:1250] = True
-    img, moved = portrait_crop(frame, [Person((1100, 100, 1250, 700), 0.9, mask)])
+    # Someone near the right edge stays in the picture, box moved with the crop.
+    img, moved = portrait_crop(frame, [Person((1100, 100, 1250, 700), 0.9)])
     assert img.shape == (1440, 1080, 3) and len(moved) == 1
     x1, y1, x2, y2 = moved[0].bbox
-    assert 0 <= x1 < x2 <= 1080 and moved[0].mask[(y1 + y2) // 2, (x1 + x2) // 2]
+    assert 0 <= x1 < x2 <= 1080 and x2 > 1080 * 0.6  # still on the right
 
 
 def test_share_flow(tmp_path):
@@ -114,3 +110,19 @@ def test_gop_guard_stays_clean_on_a_steady_stream():
     gop = "K" + "P" * 24
     flags = _gop_run("PPP" + gop * 20)  # joined mid-GOP, then 20 good GOPs
     assert not any(flags[:3]) and all(flags[3:])
+
+
+def test_detector_returns_boxes_and_confidences():
+    from types import SimpleNamespace
+
+    import torch
+
+    from dronebooth.config import DetectorCfg
+    from dronebooth.detector import PersonDetector
+
+    det = PersonDetector.__new__(PersonDetector)  # skip loading a real model
+    det.cfg = DetectorCfg()
+    boxes = SimpleNamespace(xyxy=torch.tensor([[10.4, 20.0, 110.0, 220.0]]), conf=torch.tensor([0.8]))
+    det.model = SimpleNamespace(predict=lambda frame, **kw: [SimpleNamespace(boxes=boxes)])
+    [p] = det.detect(np.zeros((480, 640, 3), np.uint8))
+    assert p.bbox == (10, 20, 110, 220) and abs(p.conf - 0.8) < 1e-6

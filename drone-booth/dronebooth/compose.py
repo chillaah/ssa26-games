@@ -96,17 +96,13 @@ def _tag(img, x: int, y: int, lines: Sequence[str], color, u: float, above: bool
 
 
 def draw_subjects(img: np.ndarray, people: List[Person], title: str, color,
-                  max_subjects: int = 6, outline: bool = True) -> None:
+                  max_subjects: int = 6) -> None:
     u = _u(img)
     ranked = sorted(people, key=lambda p: (p.bbox[2] - p.bbox[0]) * (p.bbox[3] - p.bbox[1]),
                     reverse=True)[:max_subjects]
     # number subjects left to right so the labels read naturally
     ranked.sort(key=lambda p: p.bbox[0])
     for i, p in enumerate(ranked, 1):
-        if outline:
-            contours, _ = cv2.findContours(p.mask.astype(np.uint8), cv2.RETR_EXTERNAL,
-                                           cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(img, contours, -1, color, max(1, int(2 * u)), cv2.LINE_AA)
         _brackets(img, p.bbox, color, max(2, int(4 * u)))
         _tag(img, p.bbox[0], p.bbox[1], [title, f"SUBJECT {i:02d}  |  PERSON {p.conf * 100:.0f}%"],
              color, u)
@@ -140,7 +136,7 @@ PHOTO_SIZE = (1080, 1440)  # Instagram's 3:4 portrait
 def portrait_crop(frame: np.ndarray, people: List[Person],
                   size: Tuple[int, int] = PHOTO_SIZE) -> Tuple[np.ndarray, List[Person]]:
     """Crop the (landscape) frame to size's shape, full height, centred on the people, and scale
-    it to size. The people's boxes and masks are moved into the new picture."""
+    it to size. The people's boxes are moved into the new picture."""
     fh, fw = frame.shape[:2]
     out_w, out_h = size
     cw = min(fw, round(fh * out_w / out_h))
@@ -160,9 +156,7 @@ def portrait_crop(frame: np.ndarray, people: List[Person],
         if bx2 - bx1 < 0.5 * (x2 - x1):  # mostly outside the crop: not a subject of this photo
             continue
         box = (int(bx1 * s), int(max(y1 - y0, 0) * s), int(bx2 * s), int(min(y2 - y0, ch) * s))
-        mask = cv2.resize(p.mask[y0:y0 + ch, x0:x0 + cw].astype(np.uint8), size,
-                          interpolation=cv2.INTER_NEAREST).astype(bool)
-        moved.append(Person(box, p.conf, mask))
+        moved.append(Person(box, p.conf))
     return img, moved
 
 

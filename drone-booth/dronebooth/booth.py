@@ -160,7 +160,7 @@ class Booth:
         people = self.scanner.people
         counting = self.state == COUNTDOWN
         draw_subjects(view, people, "LOCKING ON" if counting else "SCANNING...",
-                      THREAT if counting else SCAN, b.max_subjects, outline=False)
+                      THREAT if counting else SCAN, b.max_subjects)
         blink = int(now * 2) % 2 == 0
         # Keep the clock clear of the close button (top right of the screen, see window.py).
         hud_frame(view, "SCOUTS AUTONOMOUS DRONES  //  LIVE",

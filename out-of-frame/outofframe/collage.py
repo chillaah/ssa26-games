@@ -184,7 +184,7 @@ def compose(shots: List, bonus_photo: Optional[np.ndarray], bonus_ref: Optional[
         cy = y + (i // 2) * (ch + gap)
         x1, y1, x2, y2 = paste_rounded(img, cover(shot.photo, (cw, ch)), (cx, cy), 20)
         label, color = shot_label(shot.verdict)
-        pill(img, f"{i + 1}  {label}", (x1 + 16, y2 - 34), 0.7, color,
+        pill(img, label, (x1 + 16, y2 - 34), 0.7, color,
              B.INK if color != B.GREY else B.WHITE)
     rows = (min(len(shots), 4) + 1) // 2
     y += rows * ch + max(rows - 1, 0) * gap

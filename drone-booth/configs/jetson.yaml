@@ -16,7 +16,7 @@ detector:
   model: yolo11n-seg.engine
   device: "0"
   half: true
-  conf: 0.45
+  conf: 0.55              # a backpack scored 48%; real people 59%+ in booth tests
 
 booth:
   event: SAFETY & SECURITY ASIA 2026

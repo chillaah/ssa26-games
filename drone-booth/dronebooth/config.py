@@ -24,7 +24,7 @@ class DetectorCfg:
     model: str = "yolo11n-seg.pt"  # use a TensorRT .engine on the Jetson
     device: Optional[str] = None  # None = auto, "mps", "cpu", "0" (CUDA)
     imgsz: int = 640
-    conf: float = 0.45  # only label confident detections in the souvenir photo
+    conf: float = 0.55  # bags scored 48%, real people 59%+ in booth tests
     half: bool = False
 
 

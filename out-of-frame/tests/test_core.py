@@ -310,3 +310,22 @@ def test_brand_text_and_logo_draw():
     B.text(img, "edge", (-50, -50), 2.0)  # off-canvas text is clipped, not an error
     x1, y1, x2, y2 = B.logo(img, "horizontal-white", (300, 150), 60)
     assert y2 - y1 == 60 and img[120:180, x1:x2].max() > 200
+
+
+def test_close_button_needs_two_taps():
+    import cv2
+
+    from outofframe import window as W
+
+    win = W.GameWindow.__new__(W.GameWindow)  # no real window needed for the tap logic
+    win.close_requested, win._armed_until = False, 0.0
+    img = np.zeros((720, 1280, 3), np.uint8)
+    win._draw_close(img)
+    cx, cy, r = win._btn
+    assert cx > 1200 and cy < 80 and img[cy, cx].any()
+    win._on_mouse(cv2.EVENT_LBUTTONDOWN, 10, 10, 0, None)  # elsewhere: ignored
+    assert not win.armed and not win.close_requested
+    win._on_mouse(cv2.EVENT_LBUTTONDOWN, cx, cy, 0, None)  # first tap arms
+    assert win.armed and not win.close_requested
+    win._on_mouse(cv2.EVENT_LBUTTONDOWN, cx, cy, 0, None)  # second tap closes
+    assert win.close_requested

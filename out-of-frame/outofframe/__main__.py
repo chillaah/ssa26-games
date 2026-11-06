@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import logging
 import time
-
-import cv2
 
 from .camera import Camera
 from .config import load_config
@@ -13,6 +12,7 @@ from .detector import PersonDetector
 from .framer import FollowingFramer, make_framer
 from .game import Game
 from .pose import Gallery, PoseEstimator
+from .window import GameWindow, quit_on_signals
 
 
 def main() -> None:
@@ -34,53 +34,49 @@ def main() -> None:
     if args.no_pose:
         cfg.pose.enabled = False
 
-    detector = PersonDetector(cfg.detector)
-    detector.warmup()
-    camera = Camera(cfg.camera).start()
-    framer = make_framer(cfg.framer, cfg.camera.mirror)
-    steady = None
-    if isinstance(framer, FollowingFramer) and cfg.framer.virtual.steady_view:
-        from .steady import SteadyView
+    quit_on_signals()
+    # Everything started below is stopped again in reverse order, however the game ends:
+    # close button, q/Esc, closing the window, Ctrl+C, pkill or closing the terminal.
+    with contextlib.ExitStack() as stack:
+        try:
+            detector = PersonDetector(cfg.detector)
+            detector.warmup()
+            camera = Camera(cfg.camera).start()
+            stack.callback(camera.stop)
+            framer = make_framer(cfg.framer, cfg.camera.mirror)
+            stack.callback(framer.close)  # centres the gimbal
+            steady = None
+            if isinstance(framer, FollowingFramer) and cfg.framer.virtual.steady_view:
+                from .steady import SteadyView
 
-        steady = SteadyView(framer.gimbal, cfg.framer.virtual,
-                            (cfg.framer.siyi.home_yaw, cfg.framer.siyi.home_pitch), cfg.camera.mirror)
-        steady.calibrate()
-    poser = gallery = None
-    if cfg.pose.enabled:
-        poser = PoseEstimator(cfg.pose, cfg.detector.device, cfg.detector.half)
-        gallery = Gallery.load(cfg.pose.gallery_dir, poser)
-        if not gallery.items:
-            logging.warning("Pose match off: no usable images in %s", cfg.pose.gallery_dir)
-    game = Game(cfg, framer, detector, poser=poser, gallery=gallery)
+                steady = SteadyView(framer.gimbal, cfg.framer.virtual,
+                                    (cfg.framer.siyi.home_yaw, cfg.framer.siyi.home_pitch),
+                                    cfg.camera.mirror)
+                steady.calibrate()
+            poser = gallery = None
+            if cfg.pose.enabled:
+                poser = PoseEstimator(cfg.pose, cfg.detector.device, cfg.detector.half)
+                gallery = Gallery.load(cfg.pose.gallery_dir, poser)
+                if not gallery.items:
+                    logging.warning("Pose match off: no usable images in %s", cfg.pose.gallery_dir)
+            game = Game(cfg, framer, detector, poser=poser, gallery=gallery)
 
-    win = cfg.display.window_name
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
-    fullscreen = cfg.display.fullscreen
-    cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN,
-                          cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
-    if not fullscreen:
-        cv2.resizeWindow(win, cfg.display.width // 2, cfg.display.height // 2)
-
-    try:
-        while not game.quit:
-            frame, frame_t = camera.read()
-            if steady is not None and frame is not None:
-                frame = steady.apply(frame, frame_t)
-            now = time.monotonic()
-            cv2.imshow(win, game.step(now, frame))
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("f"):
-                fullscreen = not fullscreen
-                cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN,
-                                      cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
-            elif key != 255:
-                game.on_key(key, now)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        camera.stop()
-        framer.close()
-        cv2.destroyAllWindows()
+            window = GameWindow(cfg.display.window_name, cfg.display.fullscreen,
+                                (cfg.display.width, cfg.display.height))
+            stack.callback(window.destroy)
+            while not (game.quit or window.close_requested):
+                frame, frame_t = camera.read()
+                if steady is not None and frame is not None:
+                    frame = steady.apply(frame, frame_t)
+                now = time.monotonic()
+                window.show(game.step(now, frame))
+                key = window.poll()
+                if key != 255:
+                    game.on_key(key, now)
+        except KeyboardInterrupt:
+            pass
+        logging.info("Shutting down")
+    logging.info("Closed cleanly")
 
 
 if __name__ == "__main__":

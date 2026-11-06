@@ -354,7 +354,7 @@ class Game:
         shown = min(self.round + 1, self.cfg.game.shots)
         R.text(canvas, f"PHOTO {shown}/{self.cfg.game.shots}", (40, 78), 1.8, R.WHITE, anchor="left",
                font=R.FONT_SEMIBOLD)
-        R.logo(canvas, d.logo, (W - 40, 62), 64, anchor="right")
+        R.logo(canvas, d.logo, (W - 130, 62), 64, anchor="right")  # clear of the close button
         # Taken photos as face-down cards, verdicts are revealed at the end.
         n = self.cfg.game.shots
         cw, ch, gap = 110, 80, 14

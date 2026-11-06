@@ -25,7 +25,12 @@ Model weights (`*.pt`), captured sessions and visitor data are not tracked in gi
 
 On the Jetson, `./jetson/install-shortcuts.sh` puts **Out of Frame** and **Drone Booth** icons on the
 desktop. Out of Frame first asks which `configs/jetson*.yaml` to use (`jetson_steady` is pre-selected).
-Each opens a terminal with the log, also saved to `/tmp/outofframe.log` / `/tmp/dronebooth.log`.
+Each opens a terminal with the log, also saved to `/tmp/outofframe.log` / `/tmp/dronebooth.log`. The terminal closes
+by itself when the game exits cleanly and stays open if it stopped with an error.
+
+To close either game, tap the X at the top right twice (the first tap arms it), or press q / Esc.
+Closing the window or terminal, Ctrl+C or `pkill` also shut it down cleanly: camera stopped, gimbal
+centred, share server closed.
 
 ## Branding
 

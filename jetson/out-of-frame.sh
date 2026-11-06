@@ -34,12 +34,16 @@ cfg="$(zenity --list --radiolist --title "Out of Frame" --text "Pick a setup (Je
 
 if pgrep -f -- "-m outofframe" >/dev/null; then
   zenity --question --title "Out of Frame" --text "Out of Frame is already running. Stop it and start again?" || exit 0
-  pkill -f -- "-m outofframe"
-  sleep 2
+  pkill -f -- "-m outofframe"  # SIGTERM: it shuts down cleanly (camera, gimbal, window)
+  for _ in $(seq 20); do pgrep -f -- "-m outofframe" >/dev/null || break; sleep 0.5; done
 fi
 
 echo "Starting Out of Frame with configs/$cfg.yaml (log: /tmp/outofframe.log)"
-echo "Press q or Esc in the game window to quit, f to toggle fullscreen."
-.venv/bin/python -m outofframe --config "configs/$cfg.yaml" --fullscreen 2>&1 | tee /tmp/outofframe.log
-echo
-read -r -p "Out of Frame stopped. Press Enter to close this window."
+echo "Close: the X button at the top right (tap twice), or q / Esc. f toggles fullscreen."
+# tee ignores hang-ups so the cleanup log still reaches the file if this terminal is closed.
+.venv/bin/python -m outofframe --config "configs/$cfg.yaml" --fullscreen 2>&1 | (trap '' HUP INT TERM; exec tee /tmp/outofframe.log)
+rc=${PIPESTATUS[0]}
+if [ "$rc" -ne 0 ]; then
+  echo
+  read -r -p "Out of Frame stopped with an error (exit code $rc, log in /tmp/outofframe.log). Press Enter to close."
+fi

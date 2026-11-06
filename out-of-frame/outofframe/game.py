@@ -325,11 +325,10 @@ class Game:
             pulse = 0.5 + 0.5 * np.sin(now * 3)
             R.logo(canvas, d.logo, (cx, int(H * 0.075)), int(H * 0.07))
             R.text(canvas, "Out of Frame", (cx, int(H * 0.19)), 3.6, R.WHITE, font=R.FONT_BOLD)
-            R.text(canvas, "The camera takes %d photos with a moving box. Stay out of the box but in "
-                   "frame when the photo clicks." % self.cfg.game.shots,
-                   (cx, int(H * 0.285)), 1.05, R.WHITE, font=R.FONT_REGULAR)
-            R.text(canvas, "Dodge them all!", (cx, int(H * 0.345)), 1.3, d.accent,
-                   font=R.FONT_SEMIBOLD)
+            R.text(canvas, "The camera takes %d photos with a moving box." % self.cfg.game.shots,
+                   (cx, int(H * 0.285)), 1.3, R.WHITE, font=R.FONT_REGULAR)
+            R.text(canvas, "Stay out of the box but in frame when the photo clicks.",
+                   (cx, int(H * 0.345)), 1.3, R.WHITE, font=R.FONT_REGULAR)
             bx1, by1, bx2, by2 = R.button(canvas, "Press SPACE to play", (cx, int(H * 0.455)), 1.4)
             g = int(6 + 6 * pulse)
             R.rounded_rect(canvas, (bx1 - g, by1 - g, bx2 + g, by2 + g), d.accent, 28 + g, thickness=3,

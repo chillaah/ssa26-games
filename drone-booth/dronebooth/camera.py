@@ -95,15 +95,14 @@ class Camera:
     def read(self) -> Tuple[Optional[np.ndarray], float]:
         """Return (newest frame or None, capture timestamp)."""
         if self._still is not None:
-            frame, t = self._still.copy(), time.monotonic()
+            frame, t = self._still, time.monotonic()
         else:
-            with self._lock:
+            with self._lock:  # the reader thread swaps in a new array per frame, never edits one
                 if self._frame is None:
                     return None, 0.0
-                frame, t = self._frame.copy(), self._frame_t
-        if self.cfg.mirror:
-            frame = cv2.flip(frame, 1)
-        return frame, t
+                frame, t = self._frame, self._frame_t
+        # Callers get their own copy (the flip makes one when mirroring).
+        return (cv2.flip(frame, 1) if self.cfg.mirror else frame.copy()), t
 
     def stop(self) -> None:
         self._running = False

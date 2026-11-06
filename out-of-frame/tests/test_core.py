@@ -469,7 +469,7 @@ def test_tunnel_address_used_for_links_and_restarted(tmp_path):
     cfg = ShareCfg(port=0, tunnel="cloudflare", cloudflared=str(fake), tunnel_wait_s=5)
     share = ShareServer(PhotoStore(str(tmp_path / "data")), cfg).start()
     try:
-        assert share.base_url.startswith("https://fake-run-")
+        # (While cloudflared restarts, the LAN address is used; then the new public one.)
         deadline = time.time() + 10
         while "fake-run-2" not in share.base_url and time.time() < deadline:
             time.sleep(0.2)

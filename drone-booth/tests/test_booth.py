@@ -91,16 +91,11 @@ def test_review_stays_up_until_space():
 
 
 def _gop_run(pattern, guard=None):
-    """Feed 'K'/'P' frames (40 ms apart, '_' = a frame lost) and return clean flags."""
+    """Feed 'K'/'P' frames and return the clean flags."""
     from dronebooth.camera import GopGuard
 
     g = guard or GopGuard()
-    out, pts = [], 0
-    for c in pattern:
-        pts += 40
-        if c != "_":
-            out.append(g.see(c == "K", pts))
-    return out
+    return [g.see(c == "K") for c in pattern]
 
 
 def test_gop_guard_skips_until_first_keyframe():
@@ -115,6 +110,7 @@ def test_gop_guard_flags_lost_keyframe_until_next():
     assert all(flags[100:])
 
 
-def test_gop_guard_flags_lost_frames_until_next_keyframe():
-    flags = _gop_run("K" + "P" * 10 + "__" + "P" * 12 + "K" + "P" * 3)
-    assert all(flags[:11]) and not any(flags[11:23]) and all(flags[23:])
+def test_gop_guard_stays_clean_on_a_steady_stream():
+    gop = "K" + "P" * 24
+    flags = _gop_run("PPP" + gop * 20)  # joined mid-GOP, then 20 good GOPs
+    assert not any(flags[:3]) and all(flags[3:])

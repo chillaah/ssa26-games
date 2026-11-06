@@ -44,16 +44,15 @@ class GopGuard:
     compressed frame to see() in order; it returns False from the first frame of a broken
     GOP until the next keyframe. A GOP counts as broken when:
       - no keyframe has arrived yet (joined mid-GOP),
-      - more frames than the usual keyframe interval go by without one (keyframe lost),
-      - the timestamps jump by more than two frame times (frames lost).
+      - more frames than the usual keyframe interval go by without one (keyframe lost).
+    Only frame counts are used, never timestamps: over TCP frames can arrive in bursts a few
+    ms apart, and a timestamp-gap check then took every normal frame for a lost one.
     """
 
     def __init__(self) -> None:
         self.since_key = -1  # frames since the last keyframe; -1 = none seen yet
         self.clean = False
         self.intervals: List[int] = []  # recent keyframe intervals, to learn the GOP length
-        self.frame_dur: Optional[int] = None
-        self.last_pts: Optional[int] = None
         self.bad = 0  # frames reported broken, for the log
 
     @property
@@ -64,15 +63,7 @@ class GopGuard:
         best = max(set(self.intervals), key=self.intervals.count)
         return best if self.intervals.count(best) >= 2 else None
 
-    def see(self, keyframe: bool, pts: Optional[int]) -> bool:
-        if pts is not None and self.last_pts is not None and pts > self.last_pts:
-            step = pts - self.last_pts
-            if self.frame_dur is not None and step > 2.5 * self.frame_dur:
-                self.clean = False  # frames went missing
-            if self.frame_dur is None or step < 1.5 * self.frame_dur:
-                self.frame_dur = step if self.frame_dur is None else min(step, self.frame_dur)
-        if pts is not None:
-            self.last_pts = pts
+    def see(self, keyframe: bool) -> bool:
         if keyframe:
             if self.since_key > 0:
                 self.intervals = (self.intervals + [self.since_key + 1])[-8:]
@@ -106,7 +97,7 @@ class GstReader:
         def probe(_pad, info):
             buf = info.get_buffer()
             pts = buf.pts if buf.pts != Gst.CLOCK_TIME_NONE else None
-            ok = guard.see(not buf.has_flags(Gst.BufferFlags.DELTA_UNIT), pts)
+            ok = guard.see(not buf.has_flags(Gst.BufferFlags.DELTA_UNIT))
             if not ok and pts is not None:
                 with self._plock:
                     self._bad_pts.add(pts)

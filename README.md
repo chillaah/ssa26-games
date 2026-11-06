@@ -46,8 +46,9 @@ centred, share server closed.
   2 Mbps: at 4 Mbps the camera itself drops keyframes (15-55% of frames in 60 s tests, bursts up to 15 s),
   and every frame until the next keyframe decodes as blocky smears. 2 and 1.5 Mbps lost none.
 - **Smear guard:** the camera reader watches the compressed stream and skips frames from a GOP whose
-  keyframe (or any frame) went missing, holding the last clean frame for up to 1.5 s, so a lost keyframe
-  never reaches the screen, the detector or a photo.
+  keyframe went missing (counted in frames, not timestamps), holding the last clean frame for up to 1.5 s,
+  so a lost keyframe never reaches the screen, the detector or a photo. An occasional
+  "Camera: skipped ~25 frames" log line is one lost keyframe being hidden; that's expected.
 - **Screen on, no pop-ups:** run `./jetson/kiosk-setup.sh` once on the Jetson. It turns off screen blanking (it was set to
   12 minutes), the lock screen, dimming, notification banners and software-update pop-ups, and saves the old
   values first. `./jetson/kiosk-setup.sh --undo` puts them back.

@@ -126,7 +126,7 @@ PAGE = """<!doctype html>
   button:active, .btn:active {{ background: var(--ebony-dark); }}
   .btn.secondary {{ background: #fff; color: var(--ink); border: 1px solid var(--line); }}
   .err {{ color: var(--alert); font-weight: 600; margin-top: 0; }}
-  small {{ color: var(--muted); display: block; margin-top: 14px; font-size: 12px; }}
+  small {{ color: var(--muted); display: block; margin-top: 14px; font-size: 12px; text-align: center; }}
   footer {{ margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted);
            font-size: 13px; text-align: center; }}
   footer a {{ color: var(--ink); font-weight: 600; text-decoration: none; }}

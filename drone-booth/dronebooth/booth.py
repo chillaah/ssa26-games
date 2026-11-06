@@ -209,7 +209,7 @@ class Booth:
             R.rounded_rect(canvas, (x1 - 3, y1 - 3, x2 + 3, y2 + 3), R.CHARCOAL, 8, thickness=3)
         cx = (900 + W - 90) // 2
         R.text(canvas, "THREAT DETECTED", (cx, 175), 2.4, THREAT, font=R.FONT_BOLD, shadow=False)
-        R.text(canvas, "You've been caught by The Scouts drone.", (cx, 245), 1.1, R.SILVER,
+        R.text(canvas, "You've been captured by Scouts", (cx, 245), 1.1, R.SILVER,
                font=R.FONT_REGULAR, shadow=False)
         draw_qr_panel(canvas, self.qr, cx, 400)
         R.text(canvas, "SPACE: next visitor   \u00b7   R: retake", (cx, H - 70), 0.85, R.SILVER,

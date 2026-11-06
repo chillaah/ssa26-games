@@ -22,6 +22,7 @@ booth:
 
 share:
   port: 8080
+  tunnel: cloudflare   # public https address, so phones on any network can download
   public_base_url: ""
   require_details: true
 

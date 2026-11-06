@@ -7,12 +7,14 @@ A visitor presses `SPACE`, gets a 3-2-1 countdown and a flash, and the souvenir 
 1080×1440 (Instagram's 3:4 portrait), cropped from the camera image around the people in it.
 The photo has a security-cam look: every person gets a red **THREAT DETECTED** box with a body
 outline. It also carries a case number, a timestamp, the event name and thescouts.io.
-The booth screen then shows the photo next to a **QR code**.
+The booth screen then shows the photo next to a **QR code** until `SPACE` (next visitor) or `R` (retake).
 
 Scanning the QR opens a page on the visitor's phone. It shows a blurred preview and a form
 (name, email, optional company, optional marketing consent). Submitting the form unlocks the
 full photo, with Download and Share buttons. Share uses the phone's share sheet, so it works with
 WhatsApp, Instagram and so on.
+On the Jetson the page has a public address (Cloudflare tunnel), so it opens on any network; see
+"Photo downloads from any phone" in the top-level README.
 
 ## Run on the Mac
 

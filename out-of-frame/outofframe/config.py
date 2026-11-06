@@ -150,6 +150,12 @@ class ShareCfg:
     # Leave empty to use this machine's LAN address. Set it when phones reach the
     # game through something else, e.g. a tunnel: "https://game.example.com".
     public_base_url: str = ""
+    # "cloudflare": publish the download page at a public https address (Cloudflare quick
+    # tunnel, needs internet and the cloudflared program) so any phone can open the QR code.
+    # "" = local network only. Ignored when public_base_url is set.
+    tunnel: str = ""
+    cloudflared: str = "cloudflared"  # path to the program; ~/.local/bin is also searched
+    tunnel_wait_s: float = 20.0  # at start, wait this long for the public address
     # True: players must enter name + email before they can download the photo.
     require_details: bool = True
     data_dir: str = "sessions/share"  # collages + leads.csv

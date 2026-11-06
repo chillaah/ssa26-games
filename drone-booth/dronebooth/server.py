@@ -7,6 +7,7 @@ from __future__ import annotations
 import csv
 import html
 import logging
+import os
 import re
 import secrets
 import socket
@@ -22,6 +23,7 @@ import numpy as np
 
 from .brand import ASSETS
 from .config import ShareCfg
+from .tunnel import CloudflareTunnel
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +75,8 @@ class PhotoStore:
                     w.writerow(["time", "photo_id", "name", "email", "company", "marketing_consent"])
                 w.writerow([datetime.now().isoformat(timespec="seconds"), pid, name, email,
                             company, int(marketing)])
+                fh.flush()
+                os.fsync(fh.fileno())  # on disk now, even if the power goes
 
 
 BRAND_FILE = re.compile(r"^/brand/(fonts|logos)/([A-Za-z0-9-]+\.(ttf|png))$")
@@ -265,12 +269,30 @@ class ShareServer:
         self.cfg = cfg
         self.httpd = ThreadingHTTPServer((cfg.host, cfg.port), make_handler(store, cfg))
         self.httpd.daemon_threads = True
-        self.base_url = (cfg.public_base_url.rstrip("/") if cfg.public_base_url
-                         else f"http://{lan_ip()}:{self.httpd.server_address[1]}")
+        port = self.httpd.server_address[1]
+        self._fixed_url = cfg.public_base_url.rstrip("/")
+        self._lan_url = f"http://{lan_ip()}:{port}"
+        # share.tunnel: "cloudflare" -> a public https address so phones on any network work.
+        self.tunnel = (CloudflareTunnel(port, cfg.cloudflared)
+                       if cfg.tunnel == "cloudflare" and not self._fixed_url else None)
         self._thread = threading.Thread(target=self.httpd.serve_forever, name="share", daemon=True)
+
+    @property
+    def base_url(self) -> str:
+        """public_base_url if set, else the tunnel's address once it is up, else the LAN address."""
+        if self._fixed_url:
+            return self._fixed_url
+        if self.tunnel is not None and self.tunnel.url:
+            return self.tunnel.url
+        return self._lan_url
 
     def start(self) -> "ShareServer":
         self._thread.start()
+        if self.tunnel is not None:
+            self.tunnel.start()
+            if not self.tunnel.wait(self.cfg.tunnel_wait_s):
+                log.warning("No public address yet; QR codes use %s until the tunnel is up",
+                            self._lan_url)
         log.info("Share server at %s", self.base_url)
         return self
 
@@ -278,5 +300,7 @@ class ShareServer:
         return f"{self.base_url}/p/{pid}"
 
     def stop(self) -> None:
+        if self.tunnel is not None:
+            self.tunnel.stop()
         self.httpd.shutdown()
         self.httpd.server_close()

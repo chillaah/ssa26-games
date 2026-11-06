@@ -445,3 +445,45 @@ def test_shipped_bonus_list_matches_the_gallery():
     gallery = Gallery.load(Path(__file__).resolve().parent.parent / "gallery", None)
     assert 40 <= len(gallery.bonus_items) < len(gallery.items)
     assert not any("gymnast" in i.path.stem or "handstand" in i.path.stem for i in gallery.bonus_items)
+
+
+def test_tunnel_address_used_for_links_and_restarted(tmp_path):
+    import stat
+    import time
+
+    from outofframe.config import ShareCfg
+    from outofframe.share import PhotoStore, ShareServer
+
+    # Stand-in for cloudflared: prints a quick-tunnel address (a new one each run), then
+    # the first run exits to check the restart.
+    fake = tmp_path / "cloudflared"
+    count = tmp_path / "runs"
+    fake.write_text(
+        "#!/bin/sh\n"
+        f"n=$(cat {count} 2>/dev/null || echo 0); n=$((n+1)); echo $n > {count}\n"
+        "echo 'INF Requesting new quick Tunnel on trycloudflare.com...'\n"
+        "echo \"INF |  https://fake-run-$n.trycloudflare.com  |\"\n"
+        "[ $n -eq 1 ] && exit 1\n"
+        "sleep 30\n")
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    cfg = ShareCfg(port=0, tunnel="cloudflare", cloudflared=str(fake), tunnel_wait_s=5)
+    share = ShareServer(PhotoStore(str(tmp_path / "data")), cfg).start()
+    try:
+        assert share.base_url.startswith("https://fake-run-")
+        deadline = time.time() + 10
+        while "fake-run-2" not in share.base_url and time.time() < deadline:
+            time.sleep(0.2)
+        assert share.base_url == "https://fake-run-2.trycloudflare.com"  # restarted after exit
+        assert share.url_for("abc123").startswith("https://fake-run-2.trycloudflare.com/p/")
+    finally:
+        share.stop()
+    assert share.tunnel._proc.poll() is not None  # cloudflared stopped with the game
+
+
+def test_leads_are_saved_locally(tmp_path):
+    from outofframe.share import PhotoStore
+
+    store = PhotoStore(str(tmp_path))
+    store.add_lead("abc123", "Ada", "ada@example.com", "Scouts", True)
+    rows = (tmp_path / "leads.csv").read_text().splitlines()
+    assert rows[0].startswith("time,photo_id,name,email,company") and "ada@example.com" in rows[1]

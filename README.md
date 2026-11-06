@@ -32,6 +32,36 @@ To close either game, tap the X at the top right twice (the first tap arms it), 
 Closing the window or terminal, Ctrl+C or `pkill` also shut it down cleanly: camera stopped, gimbal
 centred, share server closed.
 
+## Photo downloads from any phone
+
+Both games show a QR code for the player's photo. The page behind it (name, email, company, then the
+download) is served by the game itself: drone booth on port 8080, Out of Frame on 8081.
+
+On the Jetson (`share.tunnel: cloudflare` in the `jetson*.yaml` configs) each game also starts a
+**Cloudflare quick tunnel**, which gives the page a public `https://<random>.trycloudflare.com` address. Phones
+on mobile data or any Wi-Fi can open it. There's no account or token, and no warning page like ngrok's free plan. The Jetson needs internet. The
+address changes every time a game starts. The QR codes always use the current one, but links from before a
+restart stop working. If the tunnel drops, the game restarts it. Without internet or `cloudflared`,
+the QR codes fall back to the local-network address.
+
+Install `cloudflared` once on the Jetson (one program, no sudo):
+
+```bash
+mkdir -p ~/.local/bin
+curl -L -o ~/.local/bin/cloudflared \
+  https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64
+chmod +x ~/.local/bin/cloudflared
+```
+
+For a fixed address (e.g. `photos.thescouts.io`), set up a named Cloudflare tunnel on a domain in
+Cloudflare and put its address in `share.public_base_url`.
+
+**Visitor details stay on the Jetson.** Each submission (time, photo id, name, email, company, marketing
+consent) is appended to a CSV and written to disk at once:
+`drone-booth/booth_data/leads.csv` and `out-of-frame/sessions/share/leads.csv`. Both folders are
+git-ignored and left out of the Mac-to-Jetson sync, so they are never committed or overwritten. Copy them off
+the Jetson after the event (`scp`). Photos are under `.../photos/` next to them.
+
 ## Branding
 
 Both projects use The Scouts brand: Poppins, the Scouts logo, and the Ebony / Dutch / Powder palette.

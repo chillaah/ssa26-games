@@ -28,3 +28,6 @@ game:
 
 display:
   fullscreen: true
+
+share:
+  tunnel: cloudflare   # public https address, so phones on any network can download

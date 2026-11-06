@@ -98,12 +98,9 @@ class Booth:
         d = self.cfg.display
         b = self.cfg.booth
         canvas = np.zeros((d.height, d.width, 3), np.uint8)
-        if self.state == REVIEW:
-            if now - self.state_t >= b.review_s:
-                self._set(LIVE, now)
-            else:
-                self._draw_review(canvas, now)
-                return canvas
+        if self.state == REVIEW:  # stays up until SPACE (next visitor) or R (retake)
+            self._draw_review(canvas, now)
+            return canvas
         if frame is None:
             canvas[:] = R.INK
             R.logo(canvas, "horizontal-white", (d.width // 2, d.height // 2 - 90), 110)
@@ -196,8 +193,5 @@ class Booth:
             R.rounded_rect(canvas, (cx - q // 2 - 22, 358, cx + q // 2 + 22, 402 + q), R.WHITE, 20)
             canvas[380:380 + q, cx - q // 2:cx + q // 2] = self.qr
         R.text(canvas, self.url, (cx, 880), 0.6, R.GREY, font=R.FONT_REGULAR, shadow=False)
-        left = max(0, int(self.cfg.booth.review_s - (now - self.state_t)))
-        R.text(canvas, f"Next visitor in {left}s", (cx, 940), 1.0, R.SILVER, font=R.FONT_REGULAR,
-               shadow=False)
-        R.text(canvas, "SPACE: next   R: retake", (cx, 990), 0.8, R.GREY, font=R.FONT_REGULAR,
-               shadow=False)
+        R.text(canvas, "SPACE: next visitor   ·   R: retake", (cx, 960), 0.85, R.SILVER,
+               font=R.FONT_REGULAR, shadow=False)

@@ -38,9 +38,13 @@ Two ways to run it, sharing the same code:
 
 Same flow as the drone booth: the QR opens a page served by the game itself (`outofframe/share.py`,
 port **8081** so it can run next to the booth on 8080). The player enters name + email (stored in
-`sessions/share/leads.csv`) and downloads or shares the collage (1080×1440, Instagram's 3:4 portrait). Phones must be on the same
-network as the game machine, or set `share.public_base_url`. Turn it off with `share.enabled: false`;
+`sessions/share/leads.csv`) and downloads or shares the collage (1080×1440, Instagram's 3:4 portrait).
+The Jetson configs publish the page through a Cloudflare tunnel (`share.tunnel: cloudflare`) so any phone
+can open it, on any network; see "Photo downloads from any phone" in the top-level README. The Mac
+configs serve it on the local network only. Turn it off with `share.enabled: false`;
 `share.require_details: false` makes the details optional.
+
+The results screen stays up until `SPACE` (back to the start screen).
 
 A person counts as caught when their segmentation mask covers at least `min_body_frac`
 (0.1%) of the photo, or `min_body_px` pixels, whichever is larger. So even a hand or an elbow counts.

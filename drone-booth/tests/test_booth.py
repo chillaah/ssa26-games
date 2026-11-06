@@ -71,3 +71,20 @@ def test_share_flow(tmp_path):
             assert e.code == 404
     finally:
         server.stop()
+
+
+def test_review_stays_up_until_space():
+    from dronebooth.booth import LIVE, REVIEW, Booth
+
+    class Scanner:
+        people = []
+
+    booth = Booth(load_booth_config("configs/mac.yaml"), Scanner(), None, None)
+    booth.photo = np.zeros((1440, 1080, 3), np.uint8)
+    booth.url, booth.qr = "http://example/p/x", np.zeros((440, 440, 3), np.uint8)
+    booth._set(REVIEW, 0.0)
+    frame = np.zeros((720, 1280, 3), np.uint8)
+    booth.step(3600.0, frame)  # an hour later: no timer
+    assert booth.state == REVIEW
+    booth.on_key(ord(" "), 3601.0)
+    assert booth.state == LIVE

@@ -174,7 +174,7 @@ class Booth:
             if self.notice and now < self.notice_until:
                 R.button(canvas, self.notice, (W // 2, int(H * 0.905)), 1.2, bg=THREAT)
             else:
-                R.button(canvas, "Press SPACE to get caught", (W // 2, int(H * 0.905)), 1.3)
+                R.button(canvas, "Press SPACE to get captured", (W // 2, int(H * 0.905)), 1.3)
         elif self.state == COUNTDOWN:
             left = max(1, int(np.ceil(b.countdown_s - dt)))
             R.text(canvas, str(left), (W // 2, H // 2), 10.0, THREAT, font=R.FONT_BOLD)

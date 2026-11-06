@@ -75,10 +75,8 @@ class ShareCfg:
     marketing_consent_text: str = (
         "Yes, The Scouts may email me about drone security products and events."
     )
-    privacy_text: str = (
-        "We use your name and email to send you this photo and follow up on your visit. "
-        "Your photo link expires after the event."
-    )
+    # True: the share link uses a Cloudflare quick tunnel, whose address changes each start.
+    privacy_text: str = "Your photo link expires after the event."
 
 
 @dataclass

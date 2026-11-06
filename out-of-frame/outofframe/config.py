@@ -108,8 +108,8 @@ class GameCfg:
     bonus_pose: bool = True  # final round: copy a gallery picture's pose for the souvenir photo
     bonus_s: float = 6.0  # time to get into the pose before the photo
     get_ready_s: float = 3.0
-    lock_s_first: float = 1.2  # "locking on" warning before each snap (round 1)
-    lock_s_final: float = 0.7
+    lock_s_first: float = 0.9  # "locking on" warning before each snap (round 1)
+    lock_s_final: float = 0.5  # (the bonus round uses bonus_s instead)
     flash_s: float = 0.35
     reveal_per_shot_s: float = 1.1
     # A person counts as "in the photo" once this much of the box is covered by body pixels.
@@ -165,10 +165,8 @@ class ShareCfg:
     marketing_consent_text: str = (
         "Yes, The Scouts may email me about drone security products and events."
     )
-    privacy_text: str = (
-        "We use your name and email to send you this photo and follow up on your visit. "
-        "Your photo link expires after the event."
-    )
+    # True: the share link uses a Cloudflare quick tunnel, whose address changes each start.
+    privacy_text: str = "Your photo link expires after the event."
 
 
 @dataclass

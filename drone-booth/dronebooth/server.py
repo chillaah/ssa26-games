@@ -134,7 +134,7 @@ PAGE = """<!doctype html>
 <body><main>
 <header><img src="/brand/logos/horizontal-black.png" alt="Scouts"><span class="badge">THREAT DETECTED</span></header>
 {body}
-<footer>Scouts &middot; autonomous drone security &middot; <a href="https://thescouts.io">thescouts.io</a></footer>
+<footer>Scouts &middot; Autonomous Drones &middot; <a href="https://thescouts.io">thescouts.io</a></footer>
 </main></body></html>"""
 
 

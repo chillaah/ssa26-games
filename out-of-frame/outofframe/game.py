@@ -493,11 +493,13 @@ class Game:
                 v = shot.verdict
                 border = R.RED if v.caught else R.GREEN
                 # Nobody in view still counts as a loss, but it wasn't really a catch.
-                word = "MISS" if v.no_player else "CAUGHT" if v.caught else "CLEAR"
+                word = "MISS" if v.no_player else "THREAT DETECTED" if v.caught else "CLEAR"
                 img_rect = R.card(canvas, shot.annotated, rect, word, border)
                 cxy = ((img_rect[0] + img_rect[2]) // 2, (img_rect[1] + img_rect[3]) // 2)
-                R.stamp(canvas, word, border, cxy,
-                        max(0.8, (img_rect[2] - img_rect[0]) / 260))
+                # Stamp as big as "CAUGHT" used to be, but never wider than ~80% of the photo.
+                iw = img_rect[2] - img_rect[0]
+                tw = R.text_size(word, 1.0, R.FONT_BOLD)[0]
+                R.stamp(canvas, word, border, cxy, max(0.6, min(iw / 260, 0.8 * iw / tw)))
             else:
                 R.card(canvas, None, rect, "?")
 
@@ -525,7 +527,7 @@ class Game:
             R.button(canvas, self.win_code, (cx, int(H * 0.265)), 1.6, bg=R.GREEN)
         else:
             caught = sum(s.verdict.caught for s in self.shots)
-            R.text(canvas, "CAUGHT BY SCOUTS!", (cx, int(H * 0.11)), 2.6, R.RED, font=R.FONT_BOLD)
+            R.text(canvas, "Caught by Scouts!", (cx, int(H * 0.11)), 2.8, R.RED, font=R.FONT_BOLD)
             R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos.",
                    (cx, int(H * 0.19)), 1.1, R.WHITE, font=R.FONT_REGULAR)
         if self.share_qr is not None:

@@ -21,10 +21,19 @@ def test_configs_load():
     assert load_booth_config("configs/jetson.yaml").detector.model.endswith(".engine")
 
 
-def test_compose_keeps_frame_size():
+def test_compose_is_3_by_4_portrait_around_the_people():
+    from dronebooth.compose import portrait_crop
+
     frame = np.full((720, 1280, 3), 120, np.uint8)
     meta = PhotoMeta("0001-01", "2026-11-04 10:00:00 SGT", "EVENT", "thescouts.io")
-    assert compose_photo(frame, [_person()], meta).shape == frame.shape
+    assert compose_photo(frame, [_person()], meta).shape == (1440, 1080, 3)
+    # Someone near the right edge stays in the picture, box and mask moved with the crop.
+    mask = np.zeros((720, 1280), bool)
+    mask[100:700, 1100:1250] = True
+    img, moved = portrait_crop(frame, [Person((1100, 100, 1250, 700), 0.9, mask)])
+    assert img.shape == (1440, 1080, 3) and len(moved) == 1
+    x1, y1, x2, y2 = moved[0].bbox
+    assert 0 <= x1 < x2 <= 1080 and moved[0].mask[(y1 + y2) // 2, (x1 + x2) // 2]
 
 
 def test_share_flow(tmp_path):

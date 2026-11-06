@@ -30,7 +30,7 @@ class DetectorCfg:
 
 @dataclass
 class DisplayCfg:
-    window_name: str = "CAUGHT BY SCOUTS - Dronebooth"
+    window_name: str = "Caught by Scouts - Dronebooth"
     fullscreen: bool = False
     width: int = 1920
     height: int = 1080

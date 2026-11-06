@@ -1,4 +1,4 @@
-"""The souvenir collage a player downloads after the game (portrait, phone-story sized).
+"""The souvenir collage a player downloads after the game: 1080 x 1440, Instagram's 3:4 portrait.
 
     Scouts logo / Out of Frame / event + date
     +--------------------------------------+
@@ -25,9 +25,11 @@ import numpy as np
 
 from . import brand as B
 
-W, H = 1080, 1920
+W, H = 1080, 1440  # 3:4
 MARGIN = 60
-BONUS_ASPECT = 960 / 760  # width / height of the bonus panel; photos are cropped to this
+BONUS_H = 500  # bonus panel: full width x this
+BONUS_ASPECT = (W - 2 * MARGIN) / BONUS_H  # ~1.9; bonus photos are cropped to this
+SHOT_GAP = 24
 GREEN = B.CLEAR
 RED = B.ALERT
 
@@ -42,7 +44,7 @@ def background() -> np.ndarray:
     if _BACKGROUND is None:
         k = 8
         glow = np.zeros((H // k, W // k, 3), np.uint8)
-        cv2.ellipse(glow, (W // k // 2, 0), (W // k, 520 // k), 0, 0, 360, B.EBONY_DEEP, -1)
+        cv2.ellipse(glow, (W // k // 2, 0), (W // k, 420 // k), 0, 0, 360, B.EBONY_DEEP, -1)
         glow = cv2.resize(cv2.GaussianBlur(glow, (0, 0), 120 / k), (W, H),
                           interpolation=cv2.INTER_CUBIC)
         _BACKGROUND = cv2.addWeighted(np.full((H, W, 3), B.INK, np.uint8), 1.0, glow, 0.9, 0)
@@ -113,7 +115,7 @@ def shot_label(verdict) -> Tuple[str, tuple]:
     if verdict.no_player:
         return "MISSED", B.GREY
     if verdict.caught:
-        return "CAUGHT", RED
+        return "THREAT DETECTED", RED
     return "DODGED", GREEN
 
 
@@ -155,45 +157,42 @@ def compose(shots: List, bonus_photo: Optional[np.ndarray], bonus_ref: Optional[
     """shots: the dodge Shot objects (photo + verdict). Returns the BGR collage (H x W)."""
     img = background().copy()
 
-    B.logo(img, logo, (W // 2, 92), 64)
-    B.text(img, "Out of Frame", (W // 2, 196), 2.9, B.WHITE, font=B.BOLD)
+    B.logo(img, logo, (W // 2, 60), 46)
+    B.text(img, "Out of Frame", (W // 2, 136), 2.3, B.WHITE, font=B.BOLD)
     when = when or datetime.now()
     sub = "  ·  ".join(x for x in (event, when.strftime("%-d %b %Y")) if x)
-    B.text(img, sub, (W // 2, 262), 0.95, B.SILVER, font=B.REGULAR, shadow=False)
+    B.text(img, sub, (W // 2, 188), 0.8, B.SILVER, font=B.REGULAR, shadow=False)
 
-    y = 310
+    y = 222
     inner = W - 2 * MARGIN
     if bonus_photo is not None:
-        ph = int(inner / BONUS_ASPECT)
-        x1, y1, x2, y2 = paste_rounded(img, cover(bonus_photo, (inner, ph)), (MARGIN, y), 28)
-        pill(img, "BONUS POSE", (x1 + 26, y1 + 46), 0.9, accent, B.INK)
+        x1, y1, x2, y2 = paste_rounded(img, cover(bonus_photo, (inner, BONUS_H)), (MARGIN, y), 24)
+        pill(img, "BONUS POSE", (x1 + 22, y1 + 40), 0.8, accent, B.INK)
         if bonus_ref is not None:
-            ref = contain(bonus_ref, (int(inner * 0.34), int(ph * 0.44)))
+            ref = contain(bonus_ref, (int(inner * 0.3), int(BONUS_H * 0.5)))
             rh, rw = ref.shape[:2]
-            paste_rounded(img, ref, (x2 - rw - 28, y2 - rh - 28), 16, border=6)
-            pill(img, "THE POSE", (x2 - 28, y2 - rh - 28 - 6 - 30), 0.7, B.WHITE, B.INK,
+            paste_rounded(img, ref, (x2 - rw - 22, y2 - rh - 22), 14, border=5)
+            pill(img, "THE POSE", (x2 - 22, y2 - rh - 22 - 5 - 26), 0.62, B.WHITE, B.INK,
                  anchor="right")
-        y = y2 + 40
+        y = y2 + SHOT_GAP
 
-    gap = 30
-    cw = (inner - gap) // 2
-    aspect = (shots[0].photo.shape[1] / max(shots[0].photo.shape[0], 1)) if shots else 16 / 9
-    ch = int(cw / aspect)
+    # 2 x 2 dodge shots, each cropped to 16:9.
+    cw = (inner - SHOT_GAP) // 2
+    ch = int(cw * 9 / 16)
     for i, shot in enumerate(shots[:4]):
-        cx = MARGIN + (i % 2) * (cw + gap)
-        cy = y + (i // 2) * (ch + gap)
-        x1, y1, x2, y2 = paste_rounded(img, cover(shot.photo, (cw, ch)), (cx, cy), 20)
+        cx = MARGIN + (i % 2) * (cw + SHOT_GAP)
+        cy = y + (i // 2) * (ch + SHOT_GAP)
+        x1, y1, x2, y2 = paste_rounded(img, cover(shot.photo, (cw, ch)), (cx, cy), 18)
         label, color = shot_label(shot.verdict)
-        pill(img, label, (x1 + 16, y2 - 34), 0.7, color,
-             B.INK if color != B.GREY else B.WHITE)
+        pill(img, label, (x1 + 14, y2 - 30), 0.62, color, B.INK if color != B.GREY else B.WHITE)
     rows = (min(len(shots), 4) + 1) // 2
-    y += rows * ch + max(rows - 1, 0) * gap
+    y += rows * ch + max(rows - 1, 0) * SHOT_GAP
 
     dodged = sum(not s.verdict.caught for s in shots)
     if shots:
         headline = (f"Dodged all {len(shots)}!" if won else
                     f"Dodged {dodged} of {len(shots)}  ·  Caught by Scouts")
-        B.text(img, headline, (W // 2, (y + H - 70) // 2), 1.45, accent, font=B.BOLD)
-    B.text(img, "thescouts.io  ·  Scouts Autonomous Drones", (W // 2, H - 64), 0.85, B.SILVER,
+        B.text(img, headline, (W // 2, (y + H - 46) // 2), 1.2, accent, font=B.BOLD)
+    B.text(img, "thescouts.io  ·  Scouts Autonomous Drones", (W // 2, H - 34), 0.72, B.SILVER,
            font=B.MEDIUM, shadow=False)
     return img

@@ -161,7 +161,7 @@ class Booth:
         R.paste_fit(canvas, view, (0, 0, W, H))
 
         if self.state == LIVE:
-            R.text(canvas, "CAUGHT BY SCOUTS", (W // 2, int(H * 0.80)), 2.6, R.WHITE, font=R.FONT_BOLD)
+            R.text(canvas, "Caught by Scouts", (W // 2, int(H * 0.80)), 2.8, R.WHITE, font=R.FONT_BOLD)
             if self.notice and now < self.notice_until:
                 R.button(canvas, self.notice, (W // 2, int(H * 0.905)), 1.2, bg=THREAT)
             else:

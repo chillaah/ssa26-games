@@ -3,7 +3,8 @@
 Part of The Scouts booth at Safety & Security Asia 2026. Its sibling game is in `../out-of-frame`.
 
 A live "surveillance" view shows the camera feed, with an amber **SCANNING...** box on every person.
-A visitor presses `SPACE`, gets a 3-2-1 countdown and a flash, and the souvenir photo is created.
+A visitor presses `SPACE`, gets a 3-2-1 countdown and a flash, and the souvenir photo is created:
+1080×1440 (Instagram's 3:4 portrait), cropped from the camera image around the people in it.
 The photo has a security-cam look: every person gets a red **THREAT DETECTED** box with a body
 outline. It also carries a case number, a timestamp, the event name and thescouts.io.
 The booth screen then shows the photo next to a **QR code**.

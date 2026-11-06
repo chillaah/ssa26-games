@@ -3,7 +3,7 @@
 A booth game. The camera takes 4 photos while its frame swings around at random.
 Stay out of every photo to win a prize. Then comes a **bonus round**: copy the pose in a picture
 for a souvenir photo. At the end the photos are "developed". Any body pixels found inside a photo get
-tinted red and stamped **CAUGHT**. The player can download a collage of the game on their phone.
+tinted red and stamped **THREAT DETECTED**. The player can download a collage of the game on their phone.
 
 Two ways to run it, sharing the same code:
 
@@ -26,7 +26,8 @@ Two ways to run it, sharing the same code:
    can copy standing up: no upside-down, airborne, floor or partner poses) is shown next to the live camera:
    "Copy this pose!". After `game.bonus_s` (6 s, with a 3-2-1) the camera takes one photo, cropped
    around the players. The pose isn't scored. Pictures don't repeat for the next 30 games.
-5. **Developing photos.** The 4 photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
+5. **Developing photos.** The 4 photos are revealed one at a time, each stamped CLEAR, THREAT DETECTED or MISS
+   (the collage says DODGED, THREAT DETECTED or MISSED).
 6. **Result.** The collage (bonus photo on top with the copied picture inset, the 4 photos in a 2×2
    grid below) next to a **QR code** to download it, plus a 4-character prize code on a win. It stays
    up until `SPACE` goes back to the start screen (`SPACE` again starts a new game, `q` quits).
@@ -37,7 +38,7 @@ Two ways to run it, sharing the same code:
 
 Same flow as the drone booth: the QR opens a page served by the game itself (`outofframe/share.py`,
 port **8081** so it can run next to the booth on 8080). The player enters name + email (stored in
-`sessions/share/leads.csv`) and downloads or shares the 1080×1920 collage. Phones must be on the same
+`sessions/share/leads.csv`) and downloads or shares the collage (1080×1440, Instagram's 3:4 portrait). Phones must be on the same
 network as the game machine, or set `share.public_base_url`. Turn it off with `share.enabled: false`;
 `share.require_details: false` makes the details optional.
 

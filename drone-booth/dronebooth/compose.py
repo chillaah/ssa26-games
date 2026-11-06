@@ -72,7 +72,8 @@ def _tag(img, x: int, y: int, lines: Sequence[str], color, u: float, above: bool
     pad, gap = int(10 * u), int(8 * u)
     w = max(s[0] for s in sizes) + pad * 2
     h = sum(s[1] for s in sizes) + gap * (len(lines) - 1) + pad * 2
-    top = y - h - int(4 * u) if above and y - h - int(4 * u) >= 0 else y
+    bar = int(56 * u)  # keep clear of the HUD status bar along the top (hud_frame)
+    top = y - h - int(4 * u) if above and y - h - int(4 * u) >= bar else max(y, bar)
     x = min(max(x, 0), img.shape[1] - w)
     R.rounded_rect(img, (x, top, x + w, top + h), color, int(6 * u))
     fg = _on(color)
@@ -123,15 +124,49 @@ def hud_frame(img: np.ndarray, top_left: str, top_right: str, rec_on: bool = Tru
            anchor="right", shadow=False)
 
 
+PHOTO_SIZE = (1080, 1440)  # Instagram's 3:4 portrait
+
+
+def portrait_crop(frame: np.ndarray, people: List[Person],
+                  size: Tuple[int, int] = PHOTO_SIZE) -> Tuple[np.ndarray, List[Person]]:
+    """Crop the (landscape) frame to size's shape, full height, centred on the people, and scale
+    it to size. The people's boxes and masks are moved into the new picture."""
+    fh, fw = frame.shape[:2]
+    out_w, out_h = size
+    cw = min(fw, round(fh * out_w / out_h))
+    ch = min(fh, round(cw * out_h / out_w))
+    if people:
+        cx = (min(p.bbox[0] for p in people) + max(p.bbox[2] for p in people)) / 2
+    else:
+        cx = fw / 2
+    x0 = int(min(max(cx - cw / 2, 0), fw - cw))
+    y0 = (fh - ch) // 2
+    s = out_w / cw
+    img = cv2.resize(frame[y0:y0 + ch, x0:x0 + cw], size, interpolation=cv2.INTER_CUBIC)
+    moved = []
+    for p in people:
+        x1, y1, x2, y2 = p.bbox
+        bx1, bx2 = max(x1 - x0, 0), min(x2 - x0, cw)
+        if bx2 - bx1 < 0.5 * (x2 - x1):  # mostly outside the crop: not a subject of this photo
+            continue
+        box = (int(bx1 * s), int(max(y1 - y0, 0) * s), int(bx2 * s), int(min(y2 - y0, ch) * s))
+        mask = cv2.resize(p.mask[y0:y0 + ch, x0:x0 + cw].astype(np.uint8), size,
+                          interpolation=cv2.INTER_NEAREST).astype(bool)
+        moved.append(Person(box, p.conf, mask))
+    return img, moved
+
+
 def compose_photo(frame: np.ndarray, people: List[Person], meta: PhotoMeta,
                   max_subjects: int = 6) -> np.ndarray:
+    """The souvenir photo, 3:4 portrait (PHOTO_SIZE)."""
+    frame, people = portrait_crop(frame, people)
     img = surveillance_grade(frame)
     u = _u(img)
     h, w = img.shape[:2]
     draw_subjects(img, people, "THREAT DETECTED", THREAT, max_subjects)
     hud_frame(img, "SCOUTS AUTONOMOUS DRONES  //  DRONE CAM 01", f"{meta.timestamp}   CASE {meta.case_id}")
 
-    # bottom ribbon: logo | CAUGHT BY SCOUTS ............ event / website
+    # bottom ribbon: logo | Caught by Scouts ............ event / website
     rib = int(84 * u)
     _alpha_rect(img, (0, h - rib, w, h), R.INK, 0.72)
     cv2.rectangle(img, (0, h - rib), (w, h - rib + max(2, int(3 * u))), R.EBONY, -1)
@@ -139,7 +174,7 @@ def compose_photo(frame: np.ndarray, people: List[Person], meta: PhotoMeta,
     _, _, lx2, _ = R.logo(img, "horizontal-white", (int(30 * u), mid), int(46 * u), anchor="left")
     cv2.line(img, (lx2 + int(22 * u), mid - int(22 * u)), (lx2 + int(22 * u), mid + int(22 * u)),
              R.GREY, max(1, int(2 * u)), cv2.LINE_AA)
-    R.text(img, "CAUGHT BY SCOUTS", (lx2 + int(44 * u), mid + int(14 * u)), 1.2 * u, R.WHITE,
+    R.text(img, "Caught by Scouts", (lx2 + int(44 * u), mid + int(14 * u)), 1.2 * u, R.WHITE,
            anchor="left", font=R.FONT_BOLD, shadow=False)
     R.text(img, meta.event, (w - int(30 * u), mid - int(5 * u)), 0.6 * u, HUD, anchor="right",
            font=R.FONT, shadow=False)

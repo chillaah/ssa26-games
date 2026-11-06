@@ -379,7 +379,7 @@ def test_four_dodge_rounds_then_bonus_pose_then_collage_and_qr(tmp_path):
         assert seen.count(G.LOCKING) == 4 and G.POSE not in seen
         assert seen.index(G.BONUS) > max(i for i, s in enumerate(seen) if s == G.LOCKING)
         assert game.bonus_item is not None and game.bonus_photo is not None
-        assert game.collage.shape == (1920, 1080, 3)
+        assert game.collage.shape == (1440, 1080, 3)  # 3:4
         assert game.share_qr is not None and game.share_url.startswith(share.base_url)
         pid = game.share_url.rsplit("/", 1)[1]
         assert share.store.path(pid) is not None

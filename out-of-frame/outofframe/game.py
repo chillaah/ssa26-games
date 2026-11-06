@@ -95,8 +95,10 @@ class Game:
         elif key == ord("r"):
             self._set(ATTRACT, now)
         elif key in (ord(" "), 13):
-            if self.state in (ATTRACT, RESULTS):
+            if self.state == ATTRACT:
                 self.start(now)
+            elif self.state == RESULTS:
+                self._set(ATTRACT, now)
             elif self.state == REVEAL:
                 self._set(RESULTS, now)
 
@@ -163,9 +165,7 @@ class Game:
         elif self.state == REVEAL:
             if dt >= g.reveal_per_shot_s * (len(self.shots) + 1):
                 self._set(RESULTS, now)
-        elif self.state == RESULTS:
-            if dt >= g.results_s:
-                self._set(ATTRACT, now)
+        # RESULTS stays up (collage + QR) until SPACE goes back to the start screen.
 
         if self.show_live and self.state not in (REVEAL, RESULTS, BONUS, BONUS_FLASH):
             self._live_people = self.detector.detect(frame)
@@ -511,7 +511,6 @@ class Game:
     def _draw_final(self, canvas: np.ndarray, now: float, dt: float) -> None:
         """The collage on the left; result, prize code and the download QR on the right."""
         d = self.cfg.display
-        g = self.cfg.game
         W, H = d.width, d.height
         canvas[:] = R.INK
         right = W // 2
@@ -539,6 +538,5 @@ class Game:
             canvas[top + 22:top + 22 + q, cx - q // 2:cx - q // 2 + q] = self.share_qr
             R.text(canvas, self.share_url, (cx, top + q + 80), 0.6, R.GREY, font=R.FONT_REGULAR,
                    shadow=False)
-        left = max(0, int(np.ceil(g.results_s - dt)))
-        R.text(canvas, f"SPACE: play again   ·   back to start in {left}s", (cx, H - 60), 0.9,
+        R.text(canvas, "SPACE: back to start   ·   Q: quit", (cx, H - 60), 0.9,
                R.SILVER, font=R.FONT_REGULAR, shadow=False)

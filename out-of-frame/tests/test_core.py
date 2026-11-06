@@ -387,6 +387,14 @@ def test_four_dodge_rounds_then_bonus_pose_then_collage_and_qr(tmp_path):
         assert b"Out of Frame" in page.read()
         assert (game.session_dir / "collage.jpg").exists()
         game.step(t + 0.05, frame)  # results screen draws
+        game.step(t + 600, frame)  # ...and stays up, no timer
+        assert game.state == G.RESULTS
+        game.on_key(ord(" "), t + 601)  # SPACE: back to the start screen
+        assert game.state == G.ATTRACT
+        game.on_key(ord(" "), t + 602)  # SPACE again: new game
+        assert game.state == G.GET_READY
+        game.on_key(ord("q"), t + 603)
+        assert game.quit
     finally:
         share.stop()
 

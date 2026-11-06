@@ -112,7 +112,6 @@ class GameCfg:
     lock_s_final: float = 0.7
     flash_s: float = 0.35
     reveal_per_shot_s: float = 1.1
-    results_s: float = 45.0  # collage + download QR stay up this long
     # A person counts as "in the photo" once this much of the box is covered by body pixels.
     min_body_frac: float = 0.001
     min_body_px: int = 80

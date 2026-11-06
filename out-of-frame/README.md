@@ -27,7 +27,8 @@ Two ways to run it, sharing the same code:
    around the players. The pose isn't scored. Pictures don't repeat for the next 30 games.
 5. **Developing photos.** The 4 photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
 6. **Result.** The collage (bonus photo on top with the copied picture inset, the 4 photos in a 2×2
-   grid below) next to a **QR code** to download it, plus a 4-character prize code on a win.
+   grid below) next to a **QR code** to download it, plus a 4-character prize code on a win. It stays
+   up until `SPACE` goes back to the start screen (`SPACE` again starts a new game, `q` quits).
    Every game is logged to `sessions/results.csv`, so staff can check codes. Each session folder
    also holds the raw, judged and full-frame images, the bonus photo and `collage.jpg`.
 

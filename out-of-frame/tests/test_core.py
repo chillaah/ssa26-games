@@ -521,3 +521,21 @@ def test_frame_guard_waits_restarts_and_survives_errors():
             raise ValueError("boom")
         except ValueError:
             g3.error(float(t))
+
+
+def test_result_text_tells_misses_from_catches():
+    from outofframe.collage import result_line, tally
+    from outofframe.detector import ShotVerdict
+    from outofframe.game import Shot
+
+    def shots(*kinds):
+        v = {"spotted": ShotVerdict(True, 1, 1, False), "missed": ShotVerdict(True, 0, 0, True),
+             "dodged": ShotVerdict(False, 0, 1, False)}
+        return [Shot(None, None, v[k]) for k in kinds]
+
+    four_misses = shots("missed", "missed", "missed", "missed")
+    assert tally(four_misses) == (0, 4, 0)
+    assert result_line(four_misses) == "You were out of view in 4 of 4 photos. Stay in frame!"
+    assert result_line(shots("spotted", "spotted", "dodged", "dodged")) == "You were spotted in 2 of 4 photos."
+    assert result_line(shots("spotted", "missed", "dodged", "dodged")) == \
+        "You were spotted in 1 of 4 photos and out of view in 1."

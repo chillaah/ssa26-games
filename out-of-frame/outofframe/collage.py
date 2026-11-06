@@ -111,6 +111,25 @@ def pill(canvas: np.ndarray, label: str, org: Tuple[int, int], scale: float, bg,
     B.text(canvas, label, ((rect[0] + rect[2]) // 2, y), scale, fg, font=B.SEMIBOLD, shadow=False)
 
 
+def tally(shots) -> Tuple[int, int, int]:
+    """(spotted, missed, dodged): spotted = really in the photo; missed = nobody in view at the
+    snap (still a loss, but not a catch); dodged = clear."""
+    spotted = sum(s.verdict.caught and not s.verdict.no_player for s in shots)
+    missed = sum(s.verdict.no_player for s in shots)
+    return spotted, missed, len(shots) - spotted - missed
+
+
+def result_line(shots) -> str:
+    """One sentence for a lost game, e.g. "You were spotted in 2 of 4 photos and out of view in 1."."""
+    spotted, missed, _ = tally(shots)
+    n = len(shots)
+    if spotted and missed:
+        return f"You were spotted in {spotted} of {n} photos and out of view in {missed}."
+    if spotted:
+        return f"You were spotted in {spotted} of {n} photos."
+    return f"You were out of view in {missed} of {n} photos. Stay in frame!"
+
+
 def shot_label(verdict) -> Tuple[str, tuple]:
     if verdict.no_player:
         return "MISSED", B.GREY
@@ -188,10 +207,11 @@ def compose(shots: List, bonus_photo: Optional[np.ndarray], bonus_ref: Optional[
     rows = (min(len(shots), 4) + 1) // 2
     y += rows * ch + max(rows - 1, 0) * SHOT_GAP
 
-    dodged = sum(not s.verdict.caught for s in shots)
+    spotted, _, dodged = tally(shots)
     if shots:
         headline = (f"Dodged all {len(shots)}!" if won else
-                    f"Dodged {dodged} of {len(shots)}  ·  Caught by Scouts")
+                    f"Dodged {dodged} of {len(shots)}  ·  "
+                    + ("Caught by Scouts" if spotted else "Stay in frame next time"))
         B.text(img, headline, (W // 2, (y + H - 46) // 2), 1.2, accent, font=B.BOLD)
     B.text(img, "thescouts.io  ·  Scouts Autonomous Drones", (W // 2, H - 34), 0.72, B.SILVER,
            font=B.MEDIUM, shadow=False)

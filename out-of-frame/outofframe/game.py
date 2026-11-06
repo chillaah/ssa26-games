@@ -287,8 +287,9 @@ class Game:
             self.win_code = "".join(self.rng.choices(string.ascii_uppercase.replace("O", "")
                                                       .replace("I", "") + "23456789", k=4))
         caught = sum(s.verdict.caught for s in self.shots)
-        log.info("game over: %s (%d/%d caught) code=%s", "WIN" if self.won else "LOSE",
-                 caught, len(self.shots), self.win_code)
+        spotted, missed, dodged = C.tally(self.shots)
+        log.info("game over: %s (%d spotted, %d out of view, %d dodged) code=%s",
+                 "WIN" if self.won else "LOSE", spotted, missed, dodged, self.win_code)
         log_path = Path(self.cfg.game.save_dir) / "results.csv"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         new = not log_path.exists()
@@ -530,10 +531,11 @@ class Game:
                    R.SILVER, font=R.FONT_REGULAR, shadow=False)
             R.button(canvas, self.win_code, (cx, 280), 1.4, bg=R.GREEN)
         else:
-            caught = sum(s.verdict.caught for s in self.shots)
-            R.text(canvas, "Caught by Scouts!", (cx, 175), 2.6, R.RED, font=R.FONT_BOLD)
-            R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos.", (cx, 245),
-                   1.1, R.SILVER, font=R.FONT_REGULAR, shadow=False)
+            spotted, _, _ = C.tally(self.shots)
+            R.text(canvas, "Caught by Scouts!" if spotted else "Out of view!", (cx, 175), 2.6,
+                   R.RED, font=R.FONT_BOLD)
+            R.text(canvas, C.result_line(self.shots), (cx, 245), 1.1, R.SILVER,
+                   font=R.FONT_REGULAR, shadow=False)
         if self.share_qr is not None:
             q = self.share_qr.shape[0]
             top = 400

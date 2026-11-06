@@ -88,9 +88,11 @@ class DetectorCfg:
 
 @dataclass
 class PoseCfg:
-    # After each snap, show the gallery image whose pose best matches the player's.
-    # Turns itself off if the gallery folder has no usable images.
+    # The gallery feeds the bonus round (a picture to copy). Turns itself off if the gallery
+    # folder has no usable images.
     enabled: bool = True
+    # Also show the gallery picture closest to the player's pose after each dodge snap.
+    match_each_snap: bool = False
     model: str = "yolo11n-pose.pt"
     conf: float = 0.30
     gallery_dir: str = "gallery"
@@ -102,13 +104,15 @@ class PoseCfg:
 
 @dataclass
 class GameCfg:
-    shots: int = 5
+    shots: int = 4  # dodge rounds (the box moves); the bonus pose round comes after them
+    bonus_pose: bool = True  # final round: copy a gallery picture's pose for the souvenir photo
+    bonus_s: float = 6.0  # time to get into the pose before the photo
     get_ready_s: float = 3.0
     lock_s_first: float = 1.2  # "locking on" warning before each snap (round 1)
     lock_s_final: float = 0.7
     flash_s: float = 0.35
     reveal_per_shot_s: float = 1.1
-    results_s: float = 15.0
+    results_s: float = 45.0  # collage + download QR stay up this long
     # A person counts as "in the photo" once this much of the box is covered by body pixels.
     min_body_frac: float = 0.001
     min_body_px: int = 80
@@ -125,6 +129,7 @@ class DisplayCfg:
     width: int = 1920
     height: int = 1080
     logo: str = "horizontal-white"  # assets/brand/logos/<logo>.png, shown in the HUD
+    event: str = "Safety & Security Asia 2026"  # printed on the souvenir collage
     # BGR. Default is the brand's Dutch (#ffefca); see outofframe/brand.py for the palette.
     accent: tuple = (202, 239, 255)
     show_live_detections: bool = False  # debug overlay, toggle with "d"
@@ -138,6 +143,27 @@ class DisplayCfg:
 
 
 @dataclass
+class ShareCfg:
+    # Results QR -> phone page where the player leaves name + email and downloads the collage.
+    enabled: bool = True
+    host: str = "0.0.0.0"
+    port: int = 8081  # the drone booth uses 8080, so both can run on one machine
+    # Leave empty to use this machine's LAN address. Set it when phones reach the
+    # game through something else, e.g. a tunnel: "https://game.example.com".
+    public_base_url: str = ""
+    # True: players must enter name + email before they can download the photo.
+    require_details: bool = True
+    data_dir: str = "sessions/share"  # collages + leads.csv
+    marketing_consent_text: str = (
+        "Yes, The Scouts may email me about drone security products and events."
+    )
+    privacy_text: str = (
+        "We use your name and email to send you this photo and follow up on your visit. "
+        "Your photo link expires after the event."
+    )
+
+
+@dataclass
 class Config:
     camera: CameraCfg = field(default_factory=CameraCfg)
     framer: FramerCfg = field(default_factory=FramerCfg)
@@ -145,6 +171,7 @@ class Config:
     pose: PoseCfg = field(default_factory=PoseCfg)
     game: GameCfg = field(default_factory=GameCfg)
     display: DisplayCfg = field(default_factory=DisplayCfg)
+    share: ShareCfg = field(default_factory=ShareCfg)
 
 
 def _merge(obj: Any, data: dict, path: str = "") -> Any:

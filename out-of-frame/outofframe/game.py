@@ -5,7 +5,7 @@ import csv
 import logging
 import random
 import string
-import time
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +14,7 @@ from typing import List, Optional, Tuple
 import cv2
 import numpy as np
 
+from . import collage as C
 from . import render as R
 from .config import Config
 from .detector import PersonDetector, ShotVerdict, judge, union_mask
@@ -23,8 +24,9 @@ from .pose import (Gallery, GalleryItem, Pose, PoseEstimator, draw_skeleton, neu
 
 log = logging.getLogger(__name__)
 
-ATTRACT, GET_READY, MOVING, LOCKING, FLASH, POSE, REVEAL, RESULTS = (
-    "attract", "get_ready", "moving", "locking", "flash", "pose", "reveal", "results")
+ATTRACT, GET_READY, MOVING, LOCKING, FLASH, POSE, BONUS, BONUS_FLASH, REVEAL, RESULTS = (
+    "attract", "get_ready", "moving", "locking", "flash", "pose", "bonus", "bonus_flash", "reveal",
+    "results")
 
 
 @dataclass
@@ -46,12 +48,14 @@ class Shot:
 class Game:
     def __init__(self, cfg: Config, framer: Framer, detector: PersonDetector,
                  rng: Optional[random.Random] = None, poser: Optional[PoseEstimator] = None,
-                 gallery: Optional[Gallery] = None):
+                 gallery: Optional[Gallery] = None, share=None):
         self.cfg = cfg
+        self.share = share  # share.ShareServer: results QR -> phone download page
         self.framer = framer
         self.detector = detector
-        self.poser = poser if gallery is not None and gallery.items else None
-        self.gallery = gallery
+        has_gallery = gallery is not None and bool(gallery.items)
+        self.poser = poser if has_gallery and cfg.pose.match_each_snap else None
+        self.gallery = gallery if has_gallery else None
         self.match: Optional[PoseMatch] = None
         self._gallery_imgs = {}
         self.rng = rng or random.Random()
@@ -66,6 +70,13 @@ class Game:
         self.show_live = cfg.display.show_live_detections
         self.quit = False
         self._live_people = []
+        # Bonus round: a gallery picture to copy, then one photo of the player (no scoring).
+        self.bonus_item: Optional[GalleryItem] = None
+        self.bonus_photo: Optional[np.ndarray] = None
+        self._recent_bonus: deque = deque(maxlen=30)  # don't repeat pictures for a while
+        self.collage: Optional[np.ndarray] = None
+        self.share_url = ""
+        self.share_qr: Optional[np.ndarray] = None
         self._socials = []  # (social, QR image) shown on the attract screen
         for soc in cfg.display.socials:
             qr = cv2.imread(soc["qr"])
@@ -92,6 +103,8 @@ class Game:
         self.shots = []
         self.win_code = ""
         self.match = None
+        self.bonus_item = self.bonus_photo = self.collage = self.share_qr = None
+        self.share_url = ""
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.session_dir = Path(self.cfg.game.save_dir) / stamp
         self._set(GET_READY, now)
@@ -137,6 +150,14 @@ class Game:
         elif self.state == POSE:
             if dt >= self.cfg.pose.show_s:
                 self._next_round(now, size)
+        elif self.state == BONUS:
+            self.box = self.framer.idle(now, size)
+            if dt >= g.bonus_s:
+                self._snap_bonus(frame)
+                self._set(BONUS_FLASH, now)
+        elif self.state == BONUS_FLASH:
+            if dt >= g.flash_s:
+                self._end_game(now)
         elif self.state == REVEAL:
             if dt >= g.reveal_per_shot_s * (len(self.shots) + 1):
                 self._set(RESULTS, now)
@@ -144,7 +165,7 @@ class Game:
             if dt >= g.results_s:
                 self._set(ATTRACT, now)
 
-        if self.show_live and self.state not in (REVEAL, RESULTS):
+        if self.show_live and self.state not in (REVEAL, RESULTS, BONUS, BONUS_FLASH):
             self._live_people = self.detector.detect(frame)
 
         self._draw(canvas, frame, now, now - self.state_t)
@@ -154,9 +175,48 @@ class Game:
         self.round += 1
         if self.round < self.cfg.game.shots:
             self._begin_round(now, size)
+        elif self.cfg.game.bonus_pose and self.gallery is not None:
+            self.bonus_item = self._pick_bonus()
+            log.info("bonus round: %s", self.bonus_item.path.name)
+            self._set(BONUS, now)
         else:
-            self._finish()
-            self._set(REVEAL, now)
+            self._end_game(now)
+
+    def _end_game(self, now: float) -> None:
+        self._finish()
+        self._make_collage()
+        self._set(REVEAL, now)
+
+    def _pick_bonus(self) -> GalleryItem:
+        fresh = [i for i in self.gallery.items if i.path not in self._recent_bonus]
+        item = self.rng.choice(fresh or self.gallery.items)
+        self._recent_bonus.append(item.path)
+        return item
+
+    def _snap_bonus(self, frame: np.ndarray) -> None:
+        people = self.detector.detect(frame)
+        self.bonus_photo = C.bonus_crop(frame, [p.bbox for p in people])
+        if self.session_dir:
+            self.session_dir.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(self.session_dir / "bonus.jpg"), self.bonus_photo)
+            cv2.imwrite(str(self.session_dir / "bonus_full.jpg"), frame)
+
+    def _make_collage(self) -> None:
+        d = self.cfg.display
+        ref = self._gallery_image(self.bonus_item) if self.bonus_item is not None else None
+        self.collage = C.compose(self.shots, self.bonus_photo, ref, self.won, d.event, d.logo,
+                                 d.accent)
+        if self.session_dir:
+            self.session_dir.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(self.session_dir / "collage.jpg"), self.collage)
+        if self.share is not None:
+            try:
+                pid = self.share.store.save(self.collage)
+                self.share_url = self.share.url_for(pid)
+                self.share_qr = C.qr_image(self.share_url, 400)
+                log.info("collage %s at %s", pid, self.share_url)
+            except Exception:  # the game must go on without the download
+                log.exception("Could not publish the collage")
 
     def _begin_round(self, now: float, size: Tuple[int, int]) -> None:
         g = self.cfg.game
@@ -238,6 +298,9 @@ class Game:
             return
         if self.state == POSE:
             self._draw_pose(canvas, dt)
+            return
+        if self.state in (BONUS, BONUS_FLASH):
+            self._draw_bonus(canvas, frame, now, dt)
             return
 
         d = self.cfg.display
@@ -348,6 +411,35 @@ class Game:
         R.text(canvas, f"{round(m.score * 100)}% match", (W // 2, int(H * 0.155)), 1.2, R.WHITE,
                font=R.FONT_REGULAR)
 
+    def _draw_bonus(self, canvas: np.ndarray, frame: np.ndarray, now: float, dt: float) -> None:
+        """The picture to copy next to the live camera, with a countdown to the photo."""
+        d = self.cfg.display
+        W, H = d.width, d.height
+        g = self.cfg.game
+        canvas[:] = R.INK
+        R.logo(canvas, d.logo, (60, 70), 56, anchor="left")
+        pop = min(1.0, dt / 0.3) if self.state == BONUS else 1.0
+        R.text(canvas, "BONUS ROUND", (W // 2, int(H * 0.085)), 2.6 + 0.8 * (1 - pop), d.accent,
+               font=R.FONT_BOLD)
+        R.text(canvas, "Copy this pose for your souvenir photo!", (W // 2, int(H * 0.155)), 1.3,
+               R.WHITE, font=R.FONT_REGULAR)
+        top = int(H * 0.2)
+        pic = self._gallery_image(self.bonus_item)
+        R.card(canvas, pic, (60, top, W // 2 - 30, H - 50), self.bonus_item.name, d.accent)
+        live = R.card(canvas, frame, (W // 2 + 30, top, W - 60, H - 50), "YOU", R.WHITE)
+        if self.state == BONUS:
+            left = g.bonus_s - dt
+            cx, cy = (live[0] + live[2]) // 2, (live[1] + live[3]) // 2
+            if left <= 3:
+                R.text(canvas, str(max(1, int(np.ceil(left)))), (cx, cy), 8.0, d.accent,
+                       font=R.FONT_BOLD)
+            R.progress_bar(canvas, (live[0], live[3] - 14, live[2], live[3] - 4),
+                           min(1.0, dt / g.bonus_s), d.accent)
+        else:  # BONUS_FLASH
+            a = max(0.0, 1.0 - dt / g.flash_s)
+            canvas[:] = cv2.addWeighted(canvas, 1 - a, np.full_like(canvas, 255), a, 0)
+            R.text(canvas, "SNAP!", (W // 2, H // 2), 5.0, R.INK, font=R.FONT_BOLD, shadow=False)
+
     def _draw_hud(self, canvas: np.ndarray) -> None:
         d = self.cfg.display
         W, H = d.width, d.height
@@ -403,12 +495,39 @@ class Game:
             R.text(canvas, "Developing photos...", (W // 2, int(H * 0.11)), 2.4, R.WHITE,
                    font=R.FONT_BOLD)
             return
+        self._draw_final(canvas, now, dt)
+
+    def _draw_final(self, canvas: np.ndarray, now: float, dt: float) -> None:
+        """The collage on the left; result, prize code and the download QR on the right."""
+        d = self.cfg.display
+        g = self.cfg.game
+        W, H = d.width, d.height
+        canvas[:] = R.INK
+        right = W // 2
+        if self.collage is not None:
+            x1, y1, x2, y2 = R.paste_fit(canvas, self.collage, (60, 40, W // 2 - 40, H - 40))
+            R.rounded_rect(canvas, (x1 - 3, y1 - 3, x2 + 3, y2 + 3), R.CHARCOAL, 8, thickness=3)
+            right = x2 + 60
+        cx = (right + W - 60) // 2
         if self.won:
-            R.text(canvas, "YOU WIN!", (W // 2, int(H * 0.09)), 3.6, R.GREEN, font=R.FONT_BOLD)
-            R.text(canvas, f"Not in a single photo. Show code {self.win_code} to claim your prize!",
-                   (W // 2, int(H * 0.18)), 1.3, R.WHITE, font=R.FONT_REGULAR)
+            R.text(canvas, "YOU WIN!", (cx, int(H * 0.11)), 3.2, R.GREEN, font=R.FONT_BOLD)
+            R.text(canvas, "Not in a single photo. Show this code for your prize:",
+                   (cx, int(H * 0.19)), 1.0, R.WHITE, font=R.FONT_REGULAR)
+            R.button(canvas, self.win_code, (cx, int(H * 0.265)), 1.6, bg=R.GREEN)
         else:
             caught = sum(s.verdict.caught for s in self.shots)
-            R.text(canvas, "CAUGHT BY SCOUTS!", (W // 2, int(H * 0.09)), 3.2, R.RED, font=R.FONT_BOLD)
-            R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos. Try again!",
-                   (W // 2, int(H * 0.18)), 1.3, R.WHITE, font=R.FONT_REGULAR)
+            R.text(canvas, "CAUGHT BY SCOUTS!", (cx, int(H * 0.11)), 2.6, R.RED, font=R.FONT_BOLD)
+            R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos.",
+                   (cx, int(H * 0.19)), 1.1, R.WHITE, font=R.FONT_REGULAR)
+        if self.share_qr is not None:
+            q = self.share_qr.shape[0]
+            qy = int(H * 0.34)
+            R.text(canvas, "Scan to get your photo", (cx, qy), 1.4, d.accent, font=R.FONT_SEMIBOLD)
+            top = qy + 40
+            R.rounded_rect(canvas, (cx - q // 2 - 22, top, cx + q // 2 + 22, top + q + 44), R.WHITE, 20)
+            canvas[top + 22:top + 22 + q, cx - q // 2:cx - q // 2 + q] = self.share_qr
+            R.text(canvas, self.share_url, (cx, top + q + 80), 0.6, R.GREY, font=R.FONT_REGULAR,
+                   shadow=False)
+        left = max(0, int(np.ceil(g.results_s - dt)))
+        R.text(canvas, f"SPACE: play again   ·   back to start in {left}s", (cx, H - 60), 0.9,
+               R.SILVER, font=R.FONT_REGULAR, shadow=False)

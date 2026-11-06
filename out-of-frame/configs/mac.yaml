@@ -13,7 +13,7 @@ detector:
   device: mps             # Apple GPU; use "cpu" if MPS gives trouble
 
 game:
-  shots: 5
+  shots: 4   # dodge rounds, then the bonus pose round
   require_player_in_view: true
 
 display:

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -101,8 +101,10 @@ def draw_subjects(img: np.ndarray, people: List[Person], title: str, color,
              color, u)
 
 
-def hud_frame(img: np.ndarray, top_left: str, top_right: str, rec_on: bool = True) -> None:
-    """Thin surveillance HUD: viewfinder corners and the top status bar."""
+def hud_frame(img: np.ndarray, top_left: str, top_right: str, rec_on: bool = True,
+              right_inset: Optional[int] = None) -> None:
+    """Thin surveillance HUD: viewfinder corners and the top status bar. right_inset: room
+    kept free right of top_right (default 40 px at 1920 wide)."""
     u = _u(img)
     h, w = img.shape[:2]
     m, L, t = int(22 * u), int(60 * u), max(2, int(3 * u))
@@ -116,7 +118,8 @@ def hud_frame(img: np.ndarray, top_left: str, top_right: str, rec_on: bool = Tru
         cv2.circle(img, (int(48 * u), y), int(8 * u), THREAT, -1, cv2.LINE_AA)
     R.text(img, top_left, (int(66 * u), y + int(9 * u)), 0.7 * u, HUD, max(1, int(2 * u)),
            anchor="left", shadow=False)
-    R.text(img, top_right, (w - int(40 * u), y + int(9 * u)), 0.7 * u, HUD, max(1, int(2 * u)),
+    inset = int(40 * u) if right_inset is None else right_inset
+    R.text(img, top_right, (w - inset, y + int(9 * u)), 0.7 * u, HUD, max(1, int(2 * u)),
            anchor="right", shadow=False)
 
 
@@ -126,7 +129,7 @@ def compose_photo(frame: np.ndarray, people: List[Person], meta: PhotoMeta,
     u = _u(img)
     h, w = img.shape[:2]
     draw_subjects(img, people, "THREAT DETECTED", THREAT, max_subjects)
-    hud_frame(img, "SCOUTS AI  //  DRONE CAM 01", f"{meta.timestamp}   CASE {meta.case_id}")
+    hud_frame(img, "SCOUTS AUTONOMOUS DRONES  //  DRONE CAM 01", f"{meta.timestamp}   CASE {meta.case_id}")
 
     # bottom ribbon: logo | CAUGHT BY SCOUTS ............ event / website
     rib = int(84 * u)

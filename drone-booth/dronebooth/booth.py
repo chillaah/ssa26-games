@@ -154,8 +154,10 @@ class Booth:
         draw_subjects(view, people, "LOCKING ON" if counting else "SCANNING...",
                       THREAT if counting else SCAN, b.max_subjects, outline=False)
         blink = int(now * 2) % 2 == 0
-        hud_frame(view, "SCOUTS AI  //  LIVE", datetime.now().strftime("%H:%M:%S ") + b.timezone_label,
-                  rec_on=blink)
+        # Keep the clock clear of the close button (top right of the screen, see window.py).
+        hud_frame(view, "SCOUTS AUTONOMOUS DRONES  //  LIVE",
+                  datetime.now().strftime("%H:%M:%S ") + b.timezone_label, rec_on=blink,
+                  right_inset=int(150 * view.shape[1] / W))
         R.paste_fit(canvas, view, (0, 0, W, H))
 
         if self.state == LIVE:

@@ -23,7 +23,7 @@ detector:
   half: true
 
 game:
-  shots: 5
+  shots: 4   # dodge rounds, then the bonus pose round
   require_player_in_view: true   # walking off camera doesn't count as a dodge
 
 display:

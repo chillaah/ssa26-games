@@ -1,8 +1,9 @@
 # Out of Frame — The Scouts @ Safety & Security Asia
 
-A booth game. The camera takes 5 photos while its frame swings around at random.
-Stay out of every photo to win a prize. At the end the photos are "developed".
-Any body pixels found inside a photo get tinted red and stamped **CAUGHT**.
+A booth game. The camera takes 4 photos while its frame swings around at random.
+Stay out of every photo to win a prize. Then comes a **bonus round**: copy the pose in a picture
+for a souvenir photo. At the end the photos are "developed". Any body pixels found inside a photo get
+tinted red and stamped **CAUGHT**. The player can download a collage of the game on their phone.
 
 Two ways to run it, sharing the same code:
 
@@ -18,13 +19,25 @@ Two ways to run it, sharing the same code:
 1. **Attract screen.** Shows QR codes for The Scouts' Instagram and LinkedIn (`display.socials`;
    regenerate the images in `assets/` with `tools/make_qr.py`). Press `SPACE` to start.
 2. **Get ready.** 3-second countdown.
-3. **5 photos.** For each one, the frame moves through 1–3 random waypoints ("feints").
+3. **4 photos** (`game.shots`). For each one, the frame moves through 1–3 random waypoints ("feints").
    Then it **locks on**: the box goes yellow, then flashes red, with a progress bar.
    Then it **snaps**. Every round gets faster and the box gets bigger.
-   After each snap, a **pose match** picture is shown (see below).
-4. **Developing photos.** The photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
-5. **Result.** A win shows a 4-character prize code. Every game is logged to `sessions/results.csv`,
-   so staff can check codes. Each session folder also holds the raw, judged and full-frame images.
+4. **Bonus round** (`game.bonus_pose`). A random `gallery/` picture is shown next to the live camera:
+   "Copy this pose!". After `game.bonus_s` (6 s, with a 3-2-1) the camera takes one photo, cropped
+   around the players. The pose isn't scored. Pictures don't repeat for the next 30 games.
+5. **Developing photos.** The 4 photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
+6. **Result.** The collage (bonus photo on top with the copied picture inset, the 4 photos in a 2×2
+   grid below) next to a **QR code** to download it, plus a 4-character prize code on a win.
+   Every game is logged to `sessions/results.csv`, so staff can check codes. Each session folder
+   also holds the raw, judged and full-frame images, the bonus photo and `collage.jpg`.
+
+### Collage download
+
+Same flow as the drone booth: the QR opens a page served by the game itself (`outofframe/share.py`,
+port **8081** so it can run next to the booth on 8080). The player enters name + email (stored in
+`sessions/share/leads.csv`) and downloads or shares the 1080×1920 collage. Phones must be on the same
+network as the game machine, or set `share.public_base_url`. Turn it off with `share.enabled: false`;
+`share.require_details: false` makes the details optional.
 
 A person counts as caught when their segmentation mask covers at least `min_body_frac`
 (0.1%) of the photo, or `min_body_px` pixels, whichever is larger. So even a hand or an elbow counts.
@@ -33,9 +46,10 @@ In **virtual mode** the wide view is visible, so a player must also be in view a
 (`require_player_in_view`). Otherwise walking off camera would be an easy win. If nobody is in
 view, the photo is stamped **MISS** and still counts as a loss.
 
-## Pose match
+## Gallery and pose match
 
-After each snap, the game finds the player's pose and shows the `gallery/` picture that matches it best
+The bonus round picks from `gallery/`. Optionally (`pose.match_each_snap: true`, off by default), the
+game also finds the player's pose after each snap and shows the `gallery/` picture that matches it best
 ("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 158 public-domain / CC0 photos
 from Wikimedia Commons (athletes, dancers, martial artists, performers, statues, animals); see `gallery/CREDITS.md`.
 The most similar picture is always shown, even if it was shown before.
@@ -48,7 +62,9 @@ The most similar picture is always shown, even if it was shown before.
 - No picture is shown when the player is just standing still (`pose.max_neutral`): players are asked to
   strike a pose at every snap.
 - Settings: `pose.show_s` (time on screen), `pose.min_score` (weakest match still shown), `pose.enabled`
-  (or run with `--no-pose` to turn it off for one run).
+  (or run with `--no-pose` to turn the gallery off for one run: no bonus round, no pose match).
+- New pictures are only indexed when the pose model is loaded (`match_each_snap`, or
+  `python -m outofframe.pose`); the bonus round uses the cached poses in `index.json`.
 
 ## Run on the Mac
 

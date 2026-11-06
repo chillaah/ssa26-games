@@ -12,6 +12,7 @@ from .detector import PersonDetector
 from .framer import FollowingFramer, make_framer
 from .game import Game
 from .pose import Gallery, PoseEstimator
+from .share import PhotoStore, ShareServer
 from .window import GameWindow, quit_on_signals
 
 
@@ -20,7 +21,7 @@ def main() -> None:
     ap.add_argument("--config", default="configs/mac.yaml")
     ap.add_argument("--source", help="override camera source (index, rtsp://, gst:..., file)")
     ap.add_argument("--fullscreen", action="store_true")
-    ap.add_argument("--no-pose", action="store_true", help="skip pose matching (no pose model, no gallery)")
+    ap.add_argument("--no-pose", action="store_true", help="no gallery: skip the bonus pose round (and pose matching)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -55,11 +56,18 @@ def main() -> None:
                 steady.calibrate()
             poser = gallery = None
             if cfg.pose.enabled:
-                poser = PoseEstimator(cfg.pose, cfg.detector.device, cfg.detector.half)
+                # The bonus round only needs the cached gallery; the pose model is loaded for
+                # matching after each snap, which also indexes new pictures.
+                if cfg.pose.match_each_snap:
+                    poser = PoseEstimator(cfg.pose, cfg.detector.device, cfg.detector.half)
                 gallery = Gallery.load(cfg.pose.gallery_dir, poser)
                 if not gallery.items:
-                    logging.warning("Pose match off: no usable images in %s", cfg.pose.gallery_dir)
-            game = Game(cfg, framer, detector, poser=poser, gallery=gallery)
+                    logging.warning("No bonus round: no usable images in %s", cfg.pose.gallery_dir)
+            share = None
+            if cfg.share.enabled:
+                share = ShareServer(PhotoStore(cfg.share.data_dir), cfg.share).start()
+                stack.callback(share.stop)
+            game = Game(cfg, framer, detector, poser=poser, gallery=gallery, share=share)
 
             window = GameWindow(cfg.display.window_name, cfg.display.fullscreen,
                                 (cfg.display.width, cfg.display.height))

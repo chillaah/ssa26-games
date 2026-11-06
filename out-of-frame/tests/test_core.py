@@ -329,3 +329,63 @@ def test_close_button_needs_two_taps():
     assert win.armed and not win.close_requested
     win._on_mouse(cv2.EVENT_LBUTTONDOWN, cx, cy, 0, None)  # second tap closes
     assert win.close_requested
+
+
+def test_four_dodge_rounds_then_bonus_pose_then_collage_and_qr(tmp_path):
+    import json
+    import urllib.request
+
+    import cv2
+
+    from outofframe import game as G
+    from outofframe.config import Config
+    from outofframe.pose import Gallery
+    from outofframe.share import PhotoStore, ShareServer
+
+    gal = tmp_path / "gallery"
+    gal.mkdir()
+    k, c = _pose_kpts()
+    for name in ("ninja_1", "robot_1"):
+        cv2.imwrite(str(gal / f"{name}.jpg"), np.full((400, 300, 3), 200, np.uint8))
+    (gal / "index.json").write_text(json.dumps({
+        f"{n}.jpg": {"manual": True, "kpts": k.tolist(), "conf": c.tolist(), "bbox": [0, 0, 300, 400]}
+        for n in ("ninja_1", "robot_1")}))
+
+    class Detector:  # one person standing far left, never in the box's middle
+        def detect(self, frame):
+            mask = np.zeros(frame.shape[:2], bool)
+            mask[200:600, 0:40] = True
+            return [Person((0, 200, 40, 600), 0.9, mask)]
+
+    cfg = Config()
+    cfg.game.save_dir = str(tmp_path / "sessions")
+    cfg.share.data_dir = str(tmp_path / "share")
+    cfg.share.port = 0  # any free port
+    share = ShareServer(PhotoStore(cfg.share.data_dir), cfg.share).start()
+    try:
+        game = G.Game(cfg, VirtualFramer(cfg.framer.virtual, random.Random(1)), Detector(),
+                      rng=random.Random(2), gallery=Gallery.load(gal, None), share=share)
+        frame = np.full((720, 1280, 3), 90, np.uint8)
+        game.start(0.0)
+        seen, t = [], 0.0
+        while game.state not in (G.RESULTS,) and t < 120:
+            t += 0.05
+            game.step(t, frame)
+            if not seen or seen[-1] != game.state:
+                seen.append(game.state)
+            if game.state == G.REVEAL:
+                game.on_key(ord(" "), t)
+        assert len(game.shots) == 4
+        assert seen.count(G.LOCKING) == 4 and G.POSE not in seen
+        assert seen.index(G.BONUS) > max(i for i, s in enumerate(seen) if s == G.LOCKING)
+        assert game.bonus_item is not None and game.bonus_photo is not None
+        assert game.collage.shape == (1920, 1080, 3)
+        assert game.share_qr is not None and game.share_url.startswith(share.base_url)
+        pid = game.share_url.rsplit("/", 1)[1]
+        assert share.store.path(pid) is not None
+        page = urllib.request.urlopen(f"http://127.0.0.1:{share.httpd.server_address[1]}/p/{pid}")
+        assert b"Out of Frame" in page.read()
+        assert (game.session_dir / "collage.jpg").exists()
+        game.step(t + 0.05, frame)  # results screen draws
+    finally:
+        share.stop()

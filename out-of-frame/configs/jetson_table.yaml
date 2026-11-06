@@ -37,7 +37,7 @@ detector:
   half: true
 
 game:
-  shots: 5
+  shots: 4   # dodge rounds, then the bonus pose round
   require_player_in_view: false   # the photo is the whole view, so this can't be checked
 
 display:

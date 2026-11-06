@@ -5,3 +5,4 @@ numpy
 pillow
 pytest
 pyserial
+qrcode[pil]

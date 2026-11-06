@@ -44,6 +44,63 @@ def paste_fit(canvas: np.ndarray, img: np.ndarray, rect: Tuple[int, int, int, in
     return px, py, px + w, py + h
 
 
+def paste_fill(canvas: np.ndarray, img: np.ndarray, rect: Tuple[int, int, int, int],
+               radius: int = 0, keep: Optional[Sequence[int]] = None) -> Tuple[int, int, int, int]:
+    """Paste img filling rect (x1, y1, x2, y2): scaled to cover it and cropped, so there are no
+    bars. The crop is centred, or on keep (x1, y1, x2, y2 in img pixels, e.g. a person); if keep
+    can't fit in the crop, the whole img is shown on a blurred, darkened copy of itself. With
+    radius, the corners stay rounded (what's under them shows through)."""
+    x1, y1, x2, y2 = rect
+    dw, dh = x2 - x1, y2 - y1
+    ih, iw = img.shape[:2]
+    s = max(dw / iw, dh / ih)
+    cw, ch = min(iw, max(1, round(dw / s))), min(ih, max(1, round(dh / s)))  # source crop size
+    cx, cy = (iw - cw) // 2, (ih - ch) // 2
+    backdrop = False
+    if keep is not None:
+        kx1, ky1, kx2, ky2 = (int(v) for v in keep)
+        if kx2 - kx1 > cw or ky2 - ky1 > ch:
+            backdrop = True  # whole picture on a blurred copy of itself
+        else:
+            cx = min(max((kx1 + kx2 - cw) // 2, 0), iw - cw)
+            cy = min(max((ky1 + ky2 - ch) // 2, 0), ih - ch)
+    crop = img[cy:cy + ch, cx:cx + cw]
+    resized = cv2.resize(crop, (dw, dh), interpolation=cv2.INTER_AREA if s < 1 else cv2.INTER_LINEAR)
+    if backdrop:
+        k = max(31, (min(dw, dh) // 8) | 1)
+        resized = cv2.convertScaleAbs(cv2.GaussianBlur(resized, (k, k), 0), alpha=0.45)
+        paste_fit(resized, img, (0, 0, dw, dh))
+    if radius > 0:
+        mask = _corner_mask(dw, dh, radius)
+        np.copyto(canvas[y1:y2, x1:x2], resized, where=mask)
+    else:
+        canvas[y1:y2, x1:x2] = resized
+    return x1, y1, x2, y2
+
+
+_corner_masks: dict = {}
+
+
+def _corner_mask(w: int, h: int, r: int) -> np.ndarray:
+    """(h, w, 1) bool mask of a rounded rectangle, cached (it's the same every frame)."""
+    key = (w, h, r)
+    if key not in _corner_masks:
+        m = np.zeros((h, w), np.uint8)
+        cv2.rectangle(m, (r, 0), (w - 1 - r, h - 1), 255, -1)
+        cv2.rectangle(m, (0, r), (w - 1, h - 1 - r), 255, -1)
+        for c in ((r, r), (w - 1 - r, r), (r, h - 1 - r), (w - 1 - r, h - 1 - r)):
+            cv2.circle(m, c, r, 255, -1, cv2.LINE_AA)
+        _corner_masks[key] = (m > 127)[:, :, None]
+    return _corner_masks[key]
+
+
+def card_inner_radius(rect: Sequence[int]) -> int:
+    """Corner radius of the photo area card() draws in rect."""
+    x1, _, x2, _ = rect
+    radius = max(8, (x2 - x1) // 28)
+    return max(4, radius - max(6, (x2 - x1) // 30) // 2)
+
+
 def dim_outside(canvas: np.ndarray, box: Tuple[int, int, int, int], amount: float = 0.55) -> None:
     x1, y1, x2, y2 = box
     inside = canvas[y1:y2, x1:x2].copy()
@@ -132,19 +189,29 @@ def grid_rects(n: int, area: Tuple[int, int, int, int], aspect: float, gap: int 
 
 
 def card(canvas: np.ndarray, img: Optional[np.ndarray], rect: Sequence[int], label: str,
-         border: Color = WHITE) -> Tuple[int, int, int, int]:
-    """Rounded photo card (thescouts.io style) with a caption strip. Returns the image rect."""
+         border: Color = WHITE, fill: bool = False,
+         keep: Optional[Sequence[int]] = None) -> Tuple[int, int, int, int]:
+    """Rounded photo card (thescouts.io style) with a caption strip. Returns the image rect.
+    fill: crop img to fill the photo area (see paste_fill) instead of letterboxing it."""
     x1, y1, x2, y2 = rect
     radius = max(8, (x2 - x1) // 28)
     rounded_rect(canvas, rect, WHITE, radius)
     pad = max(6, (x2 - x1) // 30)
     cap = max(28, (y2 - y1) // 7)
     inner = (x1 + pad, y1 + pad, x2 - pad, y2 - cap)
-    rounded_rect(canvas, inner, CHARCOAL, max(4, radius - pad // 2))
+    rounded_rect(canvas, inner, CHARCOAL, card_inner_radius(rect))
     shown = inner
     if img is not None:
-        shown = paste_fit(canvas, img, inner)
-    text(canvas, label, ((x1 + x2) // 2, y2 - cap // 2), max(0.5, cap / 45), INK, font=FONT_SEMIBOLD,
+        if fill:
+            shown = paste_fill(canvas, img, inner, card_inner_radius(rect), keep)
+        else:
+            shown = paste_fit(canvas, img, inner)
+    scale = max(0.5, cap / 45)
+    room = (x2 - x1) - 4 * pad  # long names shrink to fit inside the card
+    tw = text_size(label, scale, FONT_SEMIBOLD)[0]
+    if tw > room:
+        scale *= room / tw
+    text(canvas, label, ((x1 + x2) // 2, y2 - cap // 2), scale, INK, font=FONT_SEMIBOLD,
          shadow=False)
     if border != WHITE:
         rounded_rect(canvas, rect, border, radius, thickness=5)

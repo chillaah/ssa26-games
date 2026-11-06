@@ -77,7 +77,7 @@ class Game:
         self.collage: Optional[np.ndarray] = None
         self.share_url = ""
         self.share_qr: Optional[np.ndarray] = None
-        self._bonus_bg: Optional[Tuple[np.ndarray, Tuple[int, int, int, int]]] = None
+        self._bonus_bg: Optional[Tuple[np.ndarray, Tuple[int, int, int, int], int]] = None
         C.background()  # build the collage backdrop now, not at the end of the first game
         self._socials = []  # (social, QR image) shown on the attract screen
         for soc in cfg.display.socials:
@@ -436,12 +436,14 @@ class Game:
                    R.WHITE, font=R.FONT_REGULAR)
             top = int(H * 0.2)
             R.card(bg, self._gallery_image(self.bonus_item), (60, top, W // 2 - 30, H - 50),
-                   self.bonus_item.name, d.accent)
-            inner = R.card(bg, None, (W // 2 + 30, top, W - 60, H - 50), "YOU", R.WHITE)
-            self._bonus_bg = (bg, inner)
-        bg, inner = self._bonus_bg
+                   self.bonus_item.name, d.accent, fill=True, keep=self.bonus_item.pose.bbox)
+            you = (W // 2 + 30, top, W - 60, H - 50)
+            inner = R.card(bg, None, you, "YOU", R.WHITE)
+            self._bonus_bg = (bg, inner, R.card_inner_radius(you))
+        bg, inner, radius = self._bonus_bg
         np.copyto(canvas, bg)
-        live = R.paste_fit(canvas, frame, inner)
+        # Fill the card (sides cropped) instead of letterboxing: no black bars above and below.
+        live = R.paste_fill(canvas, frame, inner, radius)
         pop = min(1.0, dt / 0.3) if self.state == BONUS else 1.0
         R.text(canvas, "BONUS ROUND", (W // 2, int(H * 0.085)), 2.6 + 0.8 * (1 - pop), d.accent,
                font=R.FONT_BOLD)

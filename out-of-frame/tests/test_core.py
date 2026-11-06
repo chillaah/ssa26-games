@@ -569,3 +569,20 @@ def test_gop_guard_flags_lost_keyframe_until_next():
 def test_gop_guard_flags_lost_frames_until_next_keyframe():
     flags = _gop_run("K" + "P" * 10 + "__" + "P" * 12 + "K" + "P" * 3)
     assert all(flags[:11]) and not any(flags[11:23]) and all(flags[23:])
+
+
+def test_paste_fill_covers_rect_and_keeps_subject():
+    from outofframe import render as R
+
+    canvas = np.zeros((300, 300, 3), np.uint8)
+    img = np.full((90, 160, 3), 200, np.uint8)  # 16:9 into a square: sides get cropped
+    assert R.paste_fill(canvas, img, (50, 50, 250, 250), radius=20) == (50, 50, 250, 250)
+    assert canvas[70:230, 50:250].min() == 200  # no bars (below and above the 20 px corners)
+    assert canvas[50, 50].max() == 0  # rounded corner left alone
+    img[:, :20] = 0  # subject at the far left edge: the crop follows it
+    canvas[:] = 0
+    R.paste_fill(canvas, img, (0, 0, 200, 200), keep=(0, 0, 20, 90))
+    assert canvas[100, 0].max() == 0 and canvas[100, 199].max() == 200
+    canvas[:] = 7  # subject wider than any crop: whole picture on a backdrop, still no bars
+    R.paste_fill(canvas, img, (0, 0, 200, 200), keep=(0, 0, 160, 90))
+    assert (canvas[:200, :200] != 7).any(axis=2).all()

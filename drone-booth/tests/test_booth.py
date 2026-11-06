@@ -46,6 +46,15 @@ def test_share_flow(tmp_path):
         assert post({"name": "Ann Tan", "email": "ann@example.com"}) == 200
         assert "ann@example.com" in (tmp_path / "leads.csv").read_text()
         assert urllib.request.urlopen(f"{base}/img/{pid}.jpg").headers["Content-Type"] == "image/jpeg"
+        font = urllib.request.urlopen(f"{base}/brand/fonts/Poppins-Bold.ttf")
+        assert font.headers["Content-Type"] == "font/ttf" and len(font.read()) > 10000
+        assert "horizontal-black.png" in urllib.request.urlopen(f"{base}/p/{pid}").read().decode()
+        for bad in ("/brand/fonts/../../dronebooth/config.py", "/brand/fonts/Nope.ttf"):
+            try:
+                urllib.request.urlopen(base + bad)
+                assert False, "expected 404"
+            except urllib.error.HTTPError as e:
+                assert e.code == 404
         try:
             urllib.request.urlopen(f"{base}/p/unknown123")
             assert False, "expected 404"

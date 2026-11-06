@@ -59,6 +59,14 @@ photo spot with the SIYI app.
 python3 -m dronebooth --config configs/jetson.yaml
 ```
 
+## Branding
+
+Screens follow The Scouts brand (thescouts.io): Poppins type, the Scouts logo, and the logo palette
+Ebony `#6d4641`, Dutch `#ffefca`, Powder `#9cadce` and Ink `#0e0e0e`. Fonts and logos are in
+`assets/brand/` (Poppins is SIL Open Font License, see `assets/brand/fonts/OFL.txt`). The palette and the
+Poppins/logo drawing helpers are in `dronebooth/brand.py`. The same file is in both projects, so keep the two copies in sync.
+The phone download page uses the same look and serves the fonts and logo itself (`/brand/...`), so it works without internet.
+
 ## Tests
 
 ```bash

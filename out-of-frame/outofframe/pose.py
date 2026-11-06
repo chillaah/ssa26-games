@@ -210,10 +210,9 @@ class Gallery:
         log.info("Gallery: %d usable images in %s", len(items), folder)
         return cls(folder, items)
 
-    def best(self, pose: Pose, min_conf: float = 0.3, exclude=(), rng=None,
-             tie: float = 0.0) -> Tuple[Optional[GalleryItem], float, bool]:
-        """(item, score, mirrored) for the closest gallery pose, skipping paths in `exclude`.
-        With an rng, picks at random among matches within `tie` of the best, for variety."""
+    def best(self, pose: Pose, min_conf: float = 0.3,
+             exclude=()) -> Tuple[Optional[GalleryItem], float, bool]:
+        """(item, score, mirrored) for the closest gallery pose, skipping paths in `exclude`."""
         mk, mc = mirror(pose.kpts, pose.conf)
         flipped = Pose(mk, mc, pose.bbox)
         scored = []
@@ -226,8 +225,6 @@ class Gallery:
         if not scored:
             return None, -1.0, False
         top = max(scored, key=lambda x: x[0])
-        if rng is not None and tie > 0:
-            top = rng.choice([x for x in scored if x[0] >= top[0] - tie])
         return top[2], top[0], top[1]
 
 

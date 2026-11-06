@@ -10,9 +10,15 @@ import numpy as np
 from . import render as R
 from .detector import Person
 
-THREAT = (40, 40, 235)  # BGR red
-SCAN = (0, 215, 255)  # BGR amber
-HUD = (235, 235, 235)
+THREAT = R.ALERT  # caught / locking on
+SCAN = R.DUTCH  # scanning
+HUD = (240, 240, 240)
+
+
+def _on(color) -> tuple:
+    """Text colour that reads on a fill of `color` (ink on light fills, white on dark ones)."""
+    b, g, r = color
+    return R.INK if 0.114 * b + 0.587 * g + 0.299 * r > 160 else R.WHITE
 
 
 @dataclass
@@ -60,21 +66,21 @@ def _brackets(img, box, color, t, frac=0.22) -> None:
 
 def _tag(img, x: int, y: int, lines: Sequence[str], color, u: float, above: bool = True) -> None:
     """Label tag anchored at the box's top-left corner (drawn above it if there is room)."""
-    scales = [0.75 * u, 0.5 * u]
-    thick = [max(1, int(2 * u)), max(1, int(1.4 * u))]
-    sizes = [cv2.getTextSize(s, R.FONT, scales[min(i, 1)], thick[min(i, 1)])[0]
-             for i, s in enumerate(lines)]
-    pad, gap = int(8 * u), int(7 * u)
+    scales = [0.72 * u, 0.5 * u]
+    fonts = [R.FONT_SEMIBOLD, R.FONT_REGULAR]
+    sizes = [R.text_size(s, scales[min(i, 1)], fonts[min(i, 1)]) for i, s in enumerate(lines)]
+    pad, gap = int(10 * u), int(8 * u)
     w = max(s[0] for s in sizes) + pad * 2
     h = sum(s[1] for s in sizes) + gap * (len(lines) - 1) + pad * 2
-    top = y - h if above and y - h >= 0 else y
+    top = y - h - int(4 * u) if above and y - h - int(4 * u) >= 0 else y
     x = min(max(x, 0), img.shape[1] - w)
-    cv2.rectangle(img, (x, top), (x + w, top + h), color, -1)
+    R.rounded_rect(img, (x, top, x + w, top + h), color, int(6 * u))
+    fg = _on(color)
     cy = top + pad
     for i, (s, (sw, sh)) in enumerate(zip(lines, sizes)):
         cy += sh
-        cv2.putText(img, s, (x + pad, cy), R.FONT, scales[min(i, 1)], (255, 255, 255),
-                    thick[min(i, 1)], cv2.LINE_AA)
+        R.text(img, s, (x + pad, cy), scales[min(i, 1)], fg, anchor="left", font=fonts[min(i, 1)],
+               shadow=False)
         cy += gap
 
 
@@ -122,23 +128,23 @@ def compose_photo(frame: np.ndarray, people: List[Person], meta: PhotoMeta,
     draw_subjects(img, people, "THREAT DETECTED", THREAT, max_subjects)
     hud_frame(img, "SCOUTS AI  //  DRONE CAM 01", f"{meta.timestamp}   CASE {meta.case_id}")
 
-    # bottom ribbon
-    rib = int(78 * u)
-    _alpha_rect(img, (0, h - rib, w, h), (0, 0, 0), 0.6)
-    cv2.rectangle(img, (0, h - rib), (int(10 * u), h), THREAT, -1)
-    R.text(img, "CAUGHT BY SCOUTS", (int(34 * u), h - rib // 2 + int(14 * u)), 1.35 * u,
-           (255, 255, 255), max(2, int(3 * u)), anchor="left", font=R.FONT_BOLD, shadow=False)
-    R.text(img, meta.event, (w - int(34 * u), h - rib // 2 - int(6 * u)), 0.62 * u, HUD,
-           max(1, int(2 * u)), anchor="right", shadow=False)
-    R.text(img, meta.website, (w - int(34 * u), h - rib // 2 + int(24 * u)), 0.62 * u, SCAN,
-           max(1, int(2 * u)), anchor="right", shadow=False)
+    # bottom ribbon: logo | CAUGHT BY SCOUTS ............ event / website
+    rib = int(84 * u)
+    _alpha_rect(img, (0, h - rib, w, h), R.INK, 0.72)
+    cv2.rectangle(img, (0, h - rib), (w, h - rib + max(2, int(3 * u))), R.EBONY, -1)
+    mid = h - rib // 2
+    _, _, lx2, _ = R.logo(img, "horizontal-white", (int(30 * u), mid), int(46 * u), anchor="left")
+    cv2.line(img, (lx2 + int(22 * u), mid - int(22 * u)), (lx2 + int(22 * u), mid + int(22 * u)),
+             R.GREY, max(1, int(2 * u)), cv2.LINE_AA)
+    R.text(img, "CAUGHT BY SCOUTS", (lx2 + int(44 * u), mid + int(14 * u)), 1.2 * u, R.WHITE,
+           anchor="left", font=R.FONT_BOLD, shadow=False)
+    R.text(img, meta.event, (w - int(30 * u), mid - int(5 * u)), 0.6 * u, HUD, anchor="right",
+           font=R.FONT, shadow=False)
+    R.text(img, meta.website, (w - int(30 * u), mid + int(25 * u)), 0.6 * u, R.DUTCH, anchor="right",
+           font=R.FONT_SEMIBOLD, shadow=False)
 
-    # status stamp under the top bar
+    # status pill just above the ribbon, clear of the subject tags at the top
     n = min(len(people), max_subjects)
-    status = f"THREAT DETECTED  -  {n} SUBJECT{'S' if n != 1 else ''} IDENTIFIED"
-    (tw, th), _ = cv2.getTextSize(status, R.FONT, 0.8 * u, max(2, int(2 * u)))
-    x, y = (w - tw) // 2, int(70 * u)
-    cv2.rectangle(img, (x - int(16 * u), y), (x + tw + int(16 * u), y + th + int(20 * u)), THREAT, -1)
-    cv2.putText(img, status, (x, y + th + int(10 * u)), R.FONT, 0.8 * u, (255, 255, 255),
-                max(2, int(2 * u)), cv2.LINE_AA)
+    status = f"THREAT DETECTED  \u00b7  {n} SUBJECT{'S' if n != 1 else ''} IDENTIFIED"
+    R.button(img, status, (w // 2, h - rib - int(36 * u)), 0.72 * u, bg=THREAT, fg=R.WHITE)
     return img

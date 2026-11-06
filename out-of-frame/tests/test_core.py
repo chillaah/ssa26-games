@@ -295,3 +295,16 @@ def test_pose_similarity_and_gallery_pick(tmp_path):
     # Excluded pictures are never picked again.
     item, _, _ = gallery.best(d, exclude={gallery.folder / "disco.png"})
     assert item.path.stem != "disco"
+
+
+def test_brand_text_and_logo_draw():
+    from outofframe import brand as B
+
+    img = np.zeros((200, 600, 3), np.uint8)
+    w, cap = B.text_size("OUT OF FRAME", 1.0, B.BOLD)
+    assert 150 < w < 300 and 15 < cap < 30  # about as wide as the old Hershey text
+    B.text(img, "OUT OF FRAME", (300, 60), 1.0, B.DUTCH, font=B.BOLD)
+    assert img[40:80, 150:450].max() > 200
+    B.text(img, "edge", (-50, -50), 2.0)  # off-canvas text is clipped, not an error
+    x1, y1, x2, y2 = B.logo(img, "horizontal-white", (300, 150), 60)
+    assert y2 - y1 == 60 and img[120:180, x1:x2].max() > 200

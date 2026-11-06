@@ -20,6 +20,7 @@ def main() -> None:
     ap.add_argument("--config", default="configs/mac.yaml")
     ap.add_argument("--source", help="override camera source (index, rtsp://, gst:..., file)")
     ap.add_argument("--fullscreen", action="store_true")
+    ap.add_argument("--no-pose", action="store_true", help="skip pose matching (no pose model, no gallery)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -30,6 +31,8 @@ def main() -> None:
         cfg.camera.source = int(args.source) if args.source.isdigit() else args.source
     if args.fullscreen:
         cfg.display.fullscreen = True
+    if args.no_pose:
+        cfg.pose.enabled = False
 
     detector = PersonDetector(cfg.detector)
     detector.warmup()

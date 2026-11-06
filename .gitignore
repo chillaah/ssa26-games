@@ -22,3 +22,4 @@ drone-booth/booth_data/
 # Local overrides
 .env
 *.local.yaml
+.gstack/

@@ -15,7 +15,8 @@ Two ways to run it, sharing the same code:
 
 ## How a round works
 
-1. **Attract screen.** Press `SPACE` to start.
+1. **Attract screen.** Shows QR codes for The Scouts' Instagram and LinkedIn (`display.socials`;
+   regenerate the images in `assets/` with `tools/make_qr.py`). Press `SPACE` to start.
 2. **Get ready.** 3-second countdown.
 3. **5 photos.** For each one, the frame moves through 1–3 random waypoints ("feints").
    Then it **locks on**: the box goes yellow, then flashes red, with a progress bar.
@@ -37,7 +38,7 @@ view, the photo is stamped **MISS** and still counts as a loss.
 After each snap, the game finds the player's pose and shows the `gallery/` picture that matches it best
 ("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 158 public-domain / CC0 photos
 from Wikimedia Commons (athletes, dancers, martial artists, performers, statues, animals); see `gallery/CREDITS.md`.
-Each picture is shown at most once per game.
+The most similar picture is always shown, even if it was shown before.
 
 - Drop images (`.jpg`/`.png`) into `gallery/`. Poses are read automatically on the next start and cached in
   `gallery/index.json`. Images with no person found are skipped.
@@ -46,7 +47,8 @@ Each picture is shown at most once per game.
 - Check a photo against the gallery: `python -m outofframe.pose --test photo.jpg`
 - No picture is shown when the player is just standing still (`pose.max_neutral`): players are asked to
   strike a pose at every snap.
-- Settings: `pose.show_s` (time on screen), `pose.min_score` (weakest match still shown), `pose.enabled`.
+- Settings: `pose.show_s` (time on screen), `pose.min_score` (weakest match still shown), `pose.enabled`
+  (or run with `--no-pose` to turn it off for one run).
 
 ## Run on the Mac
 
@@ -138,6 +140,13 @@ The most useful ones:
 - Passers-by in the background will "catch" the player. Point the camera so the play area
   has a backdrop (a wall or a banner) rather than the aisle.
 - Mark the play area on the floor with tape.
+
+## Branding
+
+Screens follow The Scouts brand (thescouts.io): Poppins type, the Scouts logo, and the logo palette
+Ebony `#6d4641`, Dutch `#ffefca`, Powder `#9cadce` and Ink `#0e0e0e`. Fonts and logos are in
+`assets/brand/` (Poppins is SIL Open Font License, see `assets/brand/fonts/OFL.txt`). The palette and the
+Poppins/logo drawing helpers are in `outofframe/brand.py`. The same file is in both projects, so keep the two copies in sync.
 
 ## Tests
 

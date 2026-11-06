@@ -105,7 +105,10 @@ class Booth:
                 self._draw_review(canvas, now)
                 return canvas
         if frame is None:
-            R.text(canvas, "Waiting for camera...", (d.width // 2, d.height // 2), 1.5)
+            canvas[:] = R.INK
+            R.logo(canvas, "horizontal-white", (d.width // 2, d.height // 2 - 90), 110)
+            R.text(canvas, "Waiting for camera...", (d.width // 2, d.height // 2 + 60), 1.3,
+                   R.SILVER, font=R.FONT_REGULAR)
             return canvas
 
         dt = now - self.state_t
@@ -156,16 +159,15 @@ class Booth:
         R.paste_fit(canvas, view, (0, 0, W, H))
 
         if self.state == LIVE:
-            R.text(canvas, "CAUGHT BY SCOUTS", (W // 2, int(H * 0.82)), 2.6, (255, 255, 255), 6,
-                   font=R.FONT_BOLD)
-            msg = "PRESS SPACE TO GET CAUGHT"
+            R.text(canvas, "CAUGHT BY SCOUTS", (W // 2, int(H * 0.80)), 2.6, R.WHITE, font=R.FONT_BOLD)
             if self.notice and now < self.notice_until:
-                msg = self.notice
-            R.text(canvas, msg, (W // 2, int(H * 0.91)), 1.4, SCAN, 3)
+                R.button(canvas, self.notice, (W // 2, int(H * 0.905)), 1.2, bg=THREAT)
+            else:
+                R.button(canvas, "Press SPACE to get caught", (W // 2, int(H * 0.905)), 1.3)
         elif self.state == COUNTDOWN:
             left = max(1, int(np.ceil(b.countdown_s - dt)))
-            R.text(canvas, str(left), (W // 2, H // 2), 10.0, THREAT, 18, font=R.FONT_BOLD)
-            R.text(canvas, "STRIKE A POSE!", (W // 2, int(H * 0.82)), 2.2, (255, 255, 255), 5)
+            R.text(canvas, str(left), (W // 2, H // 2), 10.0, THREAT, font=R.FONT_BOLD)
+            R.text(canvas, "Strike a pose!", (W // 2, int(H * 0.82)), 2.2, R.WHITE, font=R.FONT_BOLD)
         elif self.state == FLASH:
             a = max(0.0, 1.0 - dt / b.flash_s)
             canvas[:] = cv2.addWeighted(canvas, 1 - a, np.full_like(canvas, 255), a, 0)
@@ -173,23 +175,27 @@ class Booth:
     def _draw_review(self, canvas: np.ndarray, now: float) -> None:
         d = self.cfg.display
         W, H = d.width, d.height
-        canvas[:] = (22, 18, 16)
-        R.text(canvas, "THREAT DETECTED", (60, 95), 2.4, THREAT, 6, anchor="left", font=R.FONT_BOLD)
-        R.text(canvas, "You've been caught by The Scouts drone.", (60, 165), 1.2, (230, 230, 230), 2,
-               anchor="left")
+        canvas[:] = R.INK
+        R.text(canvas, "THREAT DETECTED", (60, 110), 2.4, THREAT, anchor="left", font=R.FONT_BOLD,
+               shadow=False)
+        R.text(canvas, "You've been caught by The Scouts drone.", (60, 170), 1.2, R.SILVER,
+               anchor="left", font=R.FONT_REGULAR, shadow=False)
         if self.photo is not None:
-            x1, y1, x2, y2 = R.paste_fit(canvas, self.photo, (60, 210, W - 560, H - 60))
-            cv2.rectangle(canvas, (x1, y1), (x2, y2), (60, 60, 60), 2)
+            x1, y1, x2, y2 = R.paste_fit(canvas, self.photo, (60, 220, W - 560, H - 60))
+            R.rounded_rect(canvas, (x1 - 2, y1 - 2, x2 + 2, y2 + 2), R.CHARCOAL, 6, thickness=3)
 
         px = W - 500
         cx = px + 220
-        R.text(canvas, "SCAN TO GET", (cx, 270), 1.6, (255, 255, 255), 4)
-        R.text(canvas, "YOUR PHOTO", (cx, 330), 1.6, (255, 255, 255), 4)
+        R.logo(canvas, "horizontal-white", (cx, 110), 84)
+        R.text(canvas, "Scan to get", (cx, 255), 1.5, R.WHITE, font=R.FONT_SEMIBOLD, shadow=False)
+        R.text(canvas, "your photo", (cx, 312), 1.5, R.DUTCH, font=R.FONT_SEMIBOLD, shadow=False)
         if self.qr is not None:
             q = self.qr.shape[0]
+            R.rounded_rect(canvas, (cx - q // 2 - 22, 358, cx + q // 2 + 22, 402 + q), R.WHITE, 20)
             canvas[380:380 + q, cx - q // 2:cx + q // 2] = self.qr
-            cv2.rectangle(canvas, (cx - q // 2 - 6, 374), (cx + q // 2 + 6, 386 + q), THREAT, 6)
-        R.text(canvas, self.url, (cx, 870), 0.6, (170, 170, 170), 1)
+        R.text(canvas, self.url, (cx, 880), 0.6, R.GREY, font=R.FONT_REGULAR, shadow=False)
         left = max(0, int(self.cfg.booth.review_s - (now - self.state_t)))
-        R.text(canvas, f"Next visitor in {left}s", (cx, 940), 1.0, (200, 200, 200), 2)
-        R.text(canvas, "SPACE: next   R: retake", (cx, 990), 0.8, (130, 130, 130), 2)
+        R.text(canvas, f"Next visitor in {left}s", (cx, 940), 1.0, R.SILVER, font=R.FONT_REGULAR,
+               shadow=False)
+        R.text(canvas, "SPACE: next   R: retake", (cx, 990), 0.8, R.GREY, font=R.FONT_REGULAR,
+               shadow=False)

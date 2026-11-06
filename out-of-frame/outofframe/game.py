@@ -53,7 +53,6 @@ class Game:
         self.poser = poser if gallery is not None and gallery.items else None
         self.gallery = gallery
         self.match: Optional[PoseMatch] = None
-        self.used_pictures = set()  # each gallery picture at most once per game
         self._gallery_imgs = {}
         self.rng = rng or random.Random()
         self.state = ATTRACT
@@ -67,6 +66,12 @@ class Game:
         self.show_live = cfg.display.show_live_detections
         self.quit = False
         self._live_people = []
+        self._socials = []  # (social, QR image) shown on the attract screen
+        for soc in cfg.display.socials:
+            qr = cv2.imread(soc["qr"])
+            if qr is None:
+                log.warning("QR image %s not found; showing %s without it", soc["qr"], soc["name"])
+            self._socials.append((soc, qr))
 
     # ---- input ------------------------------------------------------------------
     def on_key(self, key: int, now: float) -> None:
@@ -87,7 +92,6 @@ class Game:
         self.shots = []
         self.win_code = ""
         self.match = None
-        self.used_pictures = set()
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.session_dir = Path(self.cfg.game.save_dir) / stamp
         self._set(GET_READY, now)
@@ -193,13 +197,11 @@ class Game:
         if neutral_score(pose, self.cfg.pose.conf) > self.cfg.pose.max_neutral:
             log.info("shot %d: no pose match, player is standing still", len(self.shots))
             return None
-        item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf, self.used_pictures,
-                                                  self.rng, self.cfg.pose.tie)
+        item, score, mirrored = self.gallery.best(pose, self.cfg.pose.conf)
         log.info("shot %d: pose match %s (%.2f%s)", len(self.shots), item.path.name if item else "-",
                  score, ", mirrored" if mirrored else "")
         if item is None or score < self.cfg.pose.min_score:
             return None
-        self.used_pictures.add(item.path)
         return PoseMatch(item, score, mirrored, pose, frame)
 
     def _gallery_image(self, item: GalleryItem) -> Optional[np.ndarray]:
@@ -251,25 +253,31 @@ class Game:
         cx = W // 2
 
         if self.state == ATTRACT:
-            canvas[:] = (canvas * 0.55).astype(np.uint8)
+            canvas[:] = (canvas * 0.45).astype(np.uint8)
             R.brackets(canvas, box, d.accent, 4)
             pulse = 0.5 + 0.5 * np.sin(now * 3)
-            R.text(canvas, "OUT OF FRAME", (cx, int(H * 0.30)), 4.0, d.accent, 8, font=R.FONT_BOLD)
+            R.logo(canvas, d.logo, (cx, int(H * 0.075)), int(H * 0.07))
+            R.text(canvas, "OUT OF FRAME", (cx, int(H * 0.19)), 3.6, R.WHITE, font=R.FONT_BOLD)
             R.text(canvas, "The camera takes %d photos. Stay out of every one." % self.cfg.game.shots,
-                   (cx, int(H * 0.46)), 1.5, R.WHITE, 3)
-            R.text(canvas, "Dodge them all and WIN A PRIZE!", (cx, int(H * 0.54)), 1.5, R.YELLOW, 3)
-            col = tuple(int(c * (0.5 + 0.5 * pulse)) for c in R.WHITE)
-            R.text(canvas, "PRESS SPACE TO PLAY", (cx, int(H * 0.75)), 2.0, col, 4)
+                   (cx, int(H * 0.285)), 1.3, R.WHITE, font=R.FONT_REGULAR)
+            R.text(canvas, "Dodge them all and win a prize!", (cx, int(H * 0.345)), 1.3, d.accent,
+                   font=R.FONT_SEMIBOLD)
+            bx1, by1, bx2, by2 = R.button(canvas, "Press SPACE to play", (cx, int(H * 0.455)), 1.4)
+            g = int(6 + 6 * pulse)
+            R.rounded_rect(canvas, (bx1 - g, by1 - g, bx2 + g, by2 + g), d.accent, 28 + g, thickness=3,
+                           opacity=1.0 - 0.6 * pulse)
+            self._draw_socials(canvas)
         elif self.state == GET_READY:
             canvas[:] = (canvas * 0.6).astype(np.uint8)
             left = self.cfg.game.get_ready_s - dt
-            R.text(canvas, "GET READY TO DODGE!", (cx, int(H * 0.25)), 2.4, R.WHITE, 5)
-            R.text(canvas, str(max(1, int(np.ceil(left)))), (cx, int(H * 0.55)), 9.0, d.accent, 16,
+            R.text(canvas, "Get ready to dodge!", (cx, int(H * 0.25)), 2.4, R.WHITE, font=R.FONT_BOLD)
+            R.text(canvas, str(max(1, int(np.ceil(left)))), (cx, int(H * 0.55)), 9.0, d.accent,
                    font=R.FONT_BOLD)
             R.text(canvas, "Stay in view of the camera, but out of the box", (cx, int(H * 0.82)),
-                   1.3, R.WHITE, 2)
+                   1.3, R.WHITE, font=R.FONT_REGULAR)
             if self.poser is not None:
-                R.text(canvas, "Strike a pose at every snap!", (cx, int(H * 0.89)), 1.3, d.accent, 3)
+                R.text(canvas, "Strike a pose at every snap!", (cx, int(H * 0.89)), 1.3, d.accent,
+                       font=R.FONT_SEMIBOLD)
         elif self.state in (MOVING, LOCKING, FLASH):
             R.dim_outside(canvas, box, 0.5)
             if self.state == MOVING:
@@ -282,20 +290,43 @@ class Game:
                 R.brackets(canvas, (box[0] - inset, box[1] - inset, box[2] + inset, box[3] + inset),
                            color, 8)
                 R.progress_bar(canvas, (box[0], box[3] + 14, box[2], box[3] + 26), frac, color)
-                R.text(canvas, "LOCKING ON", ((box[0] + box[2]) // 2, box[1] - 30), 1.2, color, 3)
+                R.text(canvas, "LOCKING ON", ((box[0] + box[2]) // 2, box[1] - 30), 1.2, color,
+                       font=R.FONT_SEMIBOLD)
             else:  # FLASH
                 a = max(0.0, 1.0 - dt / self.cfg.game.flash_s)
                 canvas[:] = cv2.addWeighted(canvas, 1 - a, np.full_like(canvas, 255), a, 0)
-                R.text(canvas, "SNAP!", (cx, H // 2), 5.0, R.BLACK, 12, font=R.FONT_BOLD,
-                       shadow=False)
+                R.text(canvas, "SNAP!", (cx, H // 2), 5.0, R.INK, font=R.FONT_BOLD, shadow=False)
             self._draw_hud(canvas)
+
+    def _draw_socials(self, canvas: np.ndarray) -> None:
+        """QR codes for the Scouts' social accounts along the bottom of the screen."""
+        if not self._socials:
+            return
+        W, H = self.cfg.display.width, self.cfg.display.height
+        R.text(canvas, "Follow Scouts", (W // 2, int(H * 0.585)), 1.2, R.WHITE, font=R.FONT_SEMIBOLD)
+        q = int(H * 0.22)  # QR side
+        p = int(q * 0.07)  # white card around the code
+        gap = int(W * 0.12)
+        n = len(self._socials)
+        x = (W - n * q - (n - 1) * gap) // 2
+        y = int(H * 0.64)
+        for soc, qr in self._socials:
+            if qr is not None:
+                R.rounded_rect(canvas, (x - p, y - p, x + q + p, y + q + p), R.WHITE, p * 2)
+                canvas[y:y + q, x:x + q] = cv2.resize(qr, (q, q), interpolation=cv2.INTER_NEAREST)
+            R.text(canvas, soc["name"], (x + q // 2, y + q + p + 34), 1.0, self.cfg.display.accent,
+                   font=R.FONT_SEMIBOLD)
+            R.text(canvas, soc["handle"], (x + q // 2, y + q + p + 72), 0.85, R.WHITE,
+                   font=R.FONT_REGULAR)
+            x += q + gap
 
     def _draw_pose(self, canvas: np.ndarray, dt: float) -> None:
         """The player (with their skeleton) next to the gallery picture that matches their pose."""
         d = self.cfg.display
         W, H = d.width, d.height
         m = self.match
-        canvas[:] = (25, 22, 20)
+        canvas[:] = R.INK
+        R.logo(canvas, d.logo, (60, 70), 56, anchor="left")
         # The player, cropped around them with some room.
         x1, y1, x2, y2 = m.pose.bbox
         fh, fw = m.frame.shape[:2]
@@ -312,16 +343,18 @@ class Game:
                 pic = cv2.flip(pic, 1)
             R.card(canvas, pic, (W // 2 + 30, top, W - 60, H - 50), m.item.name, d.accent)
         pop = min(1.0, dt / 0.25)
-        R.text(canvas, "POSE MATCH!", (W // 2, int(H * 0.1)), 2.4 + 0.8 * (1 - pop), d.accent, 7,
+        R.text(canvas, "POSE MATCH!", (W // 2, int(H * 0.09)), 2.4 + 0.8 * (1 - pop), d.accent,
                font=R.FONT_BOLD)
-        R.text(canvas, f"{round(m.score * 100)}% match", (W // 2, int(H * 0.16)), 1.2, R.WHITE, 2)
+        R.text(canvas, f"{round(m.score * 100)}% match", (W // 2, int(H * 0.155)), 1.2, R.WHITE,
+               font=R.FONT_REGULAR)
 
     def _draw_hud(self, canvas: np.ndarray) -> None:
         d = self.cfg.display
         W, H = d.width, d.height
         shown = min(self.round + 1, self.cfg.game.shots)
-        R.text(canvas, f"PHOTO {shown}/{self.cfg.game.shots}", (40, 70), 1.8, R.WHITE, 4, anchor="left")
-        R.text(canvas, d.brand, (W - 40, 70), 1.2, d.accent, 3, anchor="right")
+        R.text(canvas, f"PHOTO {shown}/{self.cfg.game.shots}", (40, 78), 1.8, R.WHITE, anchor="left",
+               font=R.FONT_SEMIBOLD)
+        R.logo(canvas, d.logo, (W - 40, 62), 64, anchor="right")
         # Taken photos as face-down cards, verdicts are revealed at the end.
         n = self.cfg.game.shots
         cw, ch, gap = 110, 80, 14
@@ -331,17 +364,19 @@ class Game:
             rect = (x, H - ch - 30, x + cw, H - 30)
             if i < len(self.shots):
                 R.paste_fit(canvas, self.shots[i].photo, rect)
-                cv2.rectangle(canvas, rect[:2], rect[2:], R.WHITE, 3)
+                R.rounded_rect(canvas, rect, R.WHITE, 10, thickness=3)
             else:
-                cv2.rectangle(canvas, rect[:2], rect[2:], R.GREY, 2)
+                R.rounded_rect(canvas, rect, R.INK, 10, opacity=0.45)
+                R.rounded_rect(canvas, rect, R.SILVER, 10, thickness=2, opacity=0.7)
                 R.text(canvas, str(i + 1), ((rect[0] + rect[2]) // 2, (rect[1] + rect[3]) // 2), 1.0,
-                       R.GREY, 2)
+                       R.SILVER, font=R.FONT_SEMIBOLD)
 
     def _draw_results(self, canvas: np.ndarray, now: float, dt: float) -> None:
         d = self.cfg.display
         g = self.cfg.game
         W, H = d.width, d.height
-        canvas[:] = (25, 22, 20)
+        canvas[:] = R.INK
+        R.logo(canvas, d.logo, (60, 70), 56, anchor="left")
         revealed = len(self.shots) if self.state == RESULTS else int(dt / g.reveal_per_shot_s)
         if self.shots:
             p = self.shots[0].photo
@@ -365,15 +400,15 @@ class Game:
                 R.card(canvas, None, rect, f"#{i + 1}  ?")
 
         if self.state == REVEAL:
-            R.text(canvas, "DEVELOPING PHOTOS...", (W // 2, int(H * 0.11)), 2.4, R.WHITE, 5)
+            R.text(canvas, "Developing photos...", (W // 2, int(H * 0.11)), 2.4, R.WHITE,
+                   font=R.FONT_BOLD)
             return
         if self.won:
-            R.text(canvas, "YOU WIN!", (W // 2, int(H * 0.09)), 3.6, R.GREEN, 9, font=R.FONT_BOLD)
+            R.text(canvas, "YOU WIN!", (W // 2, int(H * 0.09)), 3.6, R.GREEN, font=R.FONT_BOLD)
             R.text(canvas, f"Not in a single photo. Show code {self.win_code} to claim your prize!",
-                   (W // 2, int(H * 0.18)), 1.3, R.WHITE, 3)
+                   (W // 2, int(H * 0.18)), 1.3, R.WHITE, font=R.FONT_REGULAR)
         else:
             caught = sum(s.verdict.caught for s in self.shots)
-            R.text(canvas, "CAUGHT BY SCOUTS!", (W // 2, int(H * 0.09)), 3.2, R.RED, 8,
-                   font=R.FONT_BOLD)
+            R.text(canvas, "CAUGHT BY SCOUTS!", (W // 2, int(H * 0.09)), 3.2, R.RED, font=R.FONT_BOLD)
             R.text(canvas, f"You were spotted in {caught} of {len(self.shots)} photos. Try again!",
-                   (W // 2, int(H * 0.18)), 1.3, R.WHITE, 3)
+                   (W // 2, int(H * 0.18)), 1.3, R.WHITE, font=R.FONT_REGULAR)

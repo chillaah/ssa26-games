@@ -97,7 +97,6 @@ class PoseCfg:
     show_s: float = 1.6  # how long the match is on screen
     min_score: float = 0.6  # 0..1; below this no match is shown
     min_limbs: int = 4  # of 10 (arms, legs, torso, head); fewer visible -> no match shown
-    tie: float = 0.05  # pick at random among matches this close to the best (variety)
     max_neutral: float = 0.68  # player standing still (closer than this to arms-down) -> no match
 
 
@@ -125,10 +124,17 @@ class DisplayCfg:
     fullscreen: bool = False
     width: int = 1920
     height: int = 1080
-    brand: str = "THE SCOUTS"
-    # BGR
-    accent: tuple = (255, 200, 0)
+    logo: str = "horizontal-white"  # assets/brand/logos/<logo>.png, shown in the HUD
+    # BGR. Default is the brand's Dutch (#ffefca); see outofframe/brand.py for the palette.
+    accent: tuple = (202, 239, 255)
     show_live_detections: bool = False  # debug overlay, toggle with "d"
+    # Shown with QR codes on the attract screen. Regenerate the QR images with tools/make_qr.py.
+    socials: list = field(default_factory=lambda: [
+        {"name": "Instagram", "handle": "@thescouts.io",
+         "url": "https://www.instagram.com/thescouts.io/", "qr": "assets/qr_instagram.png"},
+        {"name": "LinkedIn", "handle": "Scouts - Autonomous Drones",
+         "url": "https://www.linkedin.com/company/scoutsapp/posts/", "qr": "assets/qr_linkedin.png"},
+    ])
 
 
 @dataclass

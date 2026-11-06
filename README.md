@@ -21,6 +21,11 @@ Each project's README covers its configs (`mac`, `mac_siyi`, `jetson*`), SIYI A8
 
 Model weights (`*.pt`), captured sessions and visitor data are not tracked in git.
 
+## Branding
+
+Both projects use The Scouts brand: Poppins, the Scouts logo, and the Ebony / Dutch / Powder palette.
+Assets are in each project's `assets/brand/`.
+
 ## License
 
 [MIT](LICENSE)

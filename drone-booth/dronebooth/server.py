@@ -7,6 +7,7 @@ from __future__ import annotations
 import csv
 import html
 import logging
+import os
 import re
 import secrets
 import socket
@@ -20,7 +21,9 @@ from urllib.parse import parse_qs
 import cv2
 import numpy as np
 
+from .brand import ASSETS
 from .config import ShareCfg
+from .tunnel import CloudflareTunnel
 
 log = logging.getLogger(__name__)
 
@@ -72,43 +75,66 @@ class PhotoStore:
                     w.writerow(["time", "photo_id", "name", "email", "company", "marketing_consent"])
                 w.writerow([datetime.now().isoformat(timespec="seconds"), pid, name, email,
                             company, int(marketing)])
+                fh.flush()
+                os.fsync(fh.fileno())  # on disk now, even if the power goes
 
 
+BRAND_FILE = re.compile(r"^/brand/(fonts|logos)/([A-Za-z0-9-]+\.(ttf|png))$")
+BRAND_TYPES = {"ttf": "font/ttf", "png": "image/png"}
+
+# Styled after thescouts.io: white page, Poppins (served from assets/brand so it works offline),
+# black headings, grey body copy, light-grey rounded cards and Ebony buttons.
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caught by Scouts</title>
+<meta name="theme-color" content="#ffffff">
+<title>Scouts Drone Booth</title>
 <style>
-  :root {{ --red: #eb2828; --bg: #0e0f12; --card: #181a20; --text: #f2f2f2; --muted: #9aa0a6; }}
+  @font-face {{ font-family: Poppins; font-weight: 400; font-display: swap;
+               src: url(/brand/fonts/Poppins-Regular.ttf) format("truetype"); }}
+  @font-face {{ font-family: Poppins; font-weight: 500; font-display: swap;
+               src: url(/brand/fonts/Poppins-Medium.ttf) format("truetype"); }}
+  @font-face {{ font-family: Poppins; font-weight: 600; font-display: swap;
+               src: url(/brand/fonts/Poppins-SemiBold.ttf) format("truetype"); }}
+  @font-face {{ font-family: Poppins; font-weight: 700; font-display: swap;
+               src: url(/brand/fonts/Poppins-Bold.ttf) format("truetype"); }}
+  :root {{ --ink: #0e0e0e; --ebony: #6d4641; --ebony-dark: #573834; --dutch: #ffefca;
+          --powder: #9cadce; --muted: #757575; --card: #f2f2f2; --line: #e0e0e0; --alert: #e5484d; }}
   * {{ box-sizing: border-box; }}
-  body {{ margin: 0; background: var(--bg); color: var(--text);
-         font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-  main {{ max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }}
-  .badge {{ display: inline-block; background: var(--red); color: #fff; font-weight: 800;
-           letter-spacing: .08em; padding: 4px 10px; font-size: 13px; }}
-  h1 {{ margin: 10px 0 4px; font-size: 30px; letter-spacing: .02em; }}
-  p {{ color: var(--muted); margin: 6px 0 16px; }}
-  img {{ width: 100%; display: block; border: 2px solid #2a2d35; }}
-  form, .card {{ background: var(--card); padding: 16px; margin-top: 16px; }}
-  label {{ display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }}
-  input[type=text], input[type=email] {{ width: 100%; padding: 12px; font-size: 16px;
-           background: #0e0f12; color: var(--text); border: 1px solid #333842; }}
-  .check {{ display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--muted);
+  body {{ margin: 0; background: #fff; color: var(--ink);
+         font: 16px/1.5 Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+  main {{ max-width: 560px; margin: 0 auto; padding: 20px 18px 40px; }}
+  header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }}
+  header img {{ height: 34px; width: auto; border: 0; border-radius: 0; }}
+  .badge {{ display: inline-block; background: var(--alert); color: #fff; font-weight: 600;
+           letter-spacing: .04em; padding: 5px 12px; font-size: 12px; border-radius: 999px; }}
+  h1 {{ margin: 6px 0 4px; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.03em; }}
+  p {{ color: var(--muted); margin: 6px 0 18px; }}
+  .photo {{ width: 100%; display: block; border-radius: 16px; }}
+  form, .card {{ background: var(--card); border-radius: 16px; padding: 18px; margin-top: 18px; }}
+  label {{ display: block; font-size: 14px; font-weight: 500; color: var(--ink); margin: 14px 0 6px; }}
+  input[type=text], input[type=email] {{ width: 100%; padding: 13px 14px; font: inherit;
+           background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; }}
+  input[type=text]:focus, input[type=email]:focus {{ outline: 2px solid var(--ebony); border-color: transparent; }}
+  .check {{ display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; color: var(--muted);
            font-size: 14px; }}
-  .check input {{ margin-top: 3px; width: 18px; height: 18px; }}
-  button, .btn {{ display: block; width: 100%; margin-top: 16px; padding: 14px; font-size: 17px;
-           font-weight: 700; color: #fff; background: var(--red); border: 0; text-align: center;
-           text-decoration: none; cursor: pointer; }}
-  .btn.secondary {{ background: #2a2d35; }}
-  .err {{ color: #ff7a7a; font-weight: 600; }}
-  small {{ color: var(--muted); display: block; margin-top: 14px; font-size: 12px; }}
-  footer {{ margin-top: 28px; color: var(--muted); font-size: 13px; text-align: center; }}
-  footer a {{ color: var(--text); }}
+  .check label {{ font-weight: 400; color: var(--muted); }}
+  .check input {{ margin-top: 3px; width: 18px; height: 18px; accent-color: var(--ebony); }}
+  button, .btn {{ display: block; width: 100%; margin-top: 18px; padding: 14px 18px; font: inherit;
+           font-size: 16px; font-weight: 600; letter-spacing: .01em; color: #fff; background: var(--ebony);
+           border: 0; border-radius: 12px; text-align: center; text-decoration: none; cursor: pointer; }}
+  button:active, .btn:active {{ background: var(--ebony-dark); }}
+  .btn.secondary {{ background: #fff; color: var(--ink); border: 1px solid var(--line); }}
+  .err {{ color: var(--alert); font-weight: 600; margin-top: 0; }}
+  small {{ color: var(--muted); display: block; margin-top: 14px; font-size: 12px; text-align: center; }}
+  footer {{ margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted);
+           font-size: 13px; text-align: center; }}
+  footer a {{ color: var(--ink); font-weight: 600; text-decoration: none; }}
 </style></head>
 <body><main>
-<span class="badge">THREAT DETECTED</span>
+<header><img src="/brand/logos/horizontal-black.png" alt="Scouts"><span class="badge">THREAT DETECTED</span></header>
 {body}
-<footer>The Scouts &middot; autonomous drone security &middot; <a href="https://thescouts.io">thescouts.io</a></footer>
+<footer>Scouts &middot; Autonomous Drones &middot; <a href="https://thescouts.io">thescouts.io</a></footer>
 </main></body></html>"""
 
 
@@ -119,9 +145,9 @@ def form_page(pid: str, cfg: ShareCfg, error: str = "", values: Optional[dict] =
     heading = ("Enter your details to download your photo." if cfg.require_details
                else "Your photo is ready. Leave your details to stay in touch.")
     return PAGE.format(body=f"""
-<h1>Caught by Scouts</h1>
+<h1>Scouts Drone Booth</h1>
 <p>{heading}</p>
-<img src="/img/{pid}_teaser.jpg" alt="Blurred preview of your photo">
+<img class="photo" src="/img/{pid}_teaser.jpg" alt="Blurred preview of your photo">
 <form method="post" action="/p/{pid}">
   {err}
   <label for="name">Name</label>
@@ -145,18 +171,18 @@ def photo_page(pid: str, name: str = "") -> str:
     return PAGE.format(body=f"""
 <h1>{hello}</h1>
 <p>Press and hold the photo to save it, or use the buttons below.</p>
-<img src="/img/{pid}.jpg" alt="Your Caught by Scouts photo">
+<img class="photo" src="/img/{pid}.jpg" alt="Your Scouts Drone Booth photo">
 <button id="share" type="button">Share</button>
-<a class="btn secondary" href="/img/{pid}.jpg" download="caught-by-scouts.jpg">Download</a>
+<a class="btn secondary" href="/img/{pid}.jpg" download="scouts-drone-booth.jpg">Download</a>
 <script>
   const btn = document.getElementById('share');
   btn.addEventListener('click', async () => {{
     try {{
       const blob = await (await fetch('/img/{pid}.jpg')).blob();
-      const file = new File([blob], 'caught-by-scouts.jpg', {{ type: 'image/jpeg' }});
+      const file = new File([blob], 'scouts-drone-booth.jpg', {{ type: 'image/jpeg' }});
       if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
-        await navigator.share({{ files: [file], title: 'Caught by Scouts',
-                                 text: 'I got caught by The Scouts drone at Safety & Security Asia!' }});
+        await navigator.share({{ files: [file], title: 'Scouts Drone Booth',
+                                 text: 'I got captured by The Scouts drone at Safety & Security Asia!' }});
       }} else {{ window.location = '/img/{pid}.jpg'; }}
     }} catch (e) {{ /* share sheet dismissed */ }}
   }});
@@ -189,6 +215,12 @@ def make_handler(store: PhotoStore, cfg: ShareCfg):
 
         def do_GET(self):
             path = self.path.split("?", 1)[0]
+            m = BRAND_FILE.match(path)
+            if m:
+                f = ASSETS / m.group(1) / m.group(2)
+                if not f.is_file():
+                    return self._html(404, message_page("Not found", ""))
+                return self._send(200, f.read_bytes(), BRAND_TYPES[m.group(3)], cache=True)
             if path.startswith("/img/") and path.endswith(".jpg"):
                 stem = path[5:-4]
                 teaser = stem.endswith("_teaser")
@@ -203,8 +235,8 @@ def make_handler(store: PhotoStore, cfg: ShareCfg):
                                                         "Scan the QR code on the booth screen again."))
                 return self._html(200, form_page(pid, cfg))
             if path == "/":
-                return self._html(200, message_page("Caught by Scouts",
-                                                    "Visit The Scouts booth to get caught by our drone."))
+                return self._html(200, message_page("Scouts Drone Booth",
+                                                    "Visit The Scouts booth to get captured by our drone."))
             self._html(404, message_page("Not found", ""))
 
         def do_POST(self):
@@ -237,12 +269,30 @@ class ShareServer:
         self.cfg = cfg
         self.httpd = ThreadingHTTPServer((cfg.host, cfg.port), make_handler(store, cfg))
         self.httpd.daemon_threads = True
-        self.base_url = (cfg.public_base_url.rstrip("/") if cfg.public_base_url
-                         else f"http://{lan_ip()}:{self.httpd.server_address[1]}")
+        port = self.httpd.server_address[1]
+        self._fixed_url = cfg.public_base_url.rstrip("/")
+        self._lan_url = f"http://{lan_ip()}:{port}"
+        # share.tunnel: "cloudflare" -> a public https address so phones on any network work.
+        self.tunnel = (CloudflareTunnel(port, cfg.cloudflared)
+                       if cfg.tunnel == "cloudflare" and not self._fixed_url else None)
         self._thread = threading.Thread(target=self.httpd.serve_forever, name="share", daemon=True)
+
+    @property
+    def base_url(self) -> str:
+        """public_base_url if set, else the tunnel's address once it is up, else the LAN address."""
+        if self._fixed_url:
+            return self._fixed_url
+        if self.tunnel is not None and self.tunnel.url:
+            return self.tunnel.url
+        return self._lan_url
 
     def start(self) -> "ShareServer":
         self._thread.start()
+        if self.tunnel is not None:
+            self.tunnel.start()
+            if not self.tunnel.wait(self.cfg.tunnel_wait_s):
+                log.warning("No public address yet; QR codes use %s until the tunnel is up",
+                            self._lan_url)
         log.info("Share server at %s", self.base_url)
         return self
 
@@ -250,5 +300,7 @@ class ShareServer:
         return f"{self.base_url}/p/{pid}"
 
     def stop(self) -> None:
+        if self.tunnel is not None:
+            self.tunnel.stop()
         self.httpd.shutdown()
         self.httpd.server_close()

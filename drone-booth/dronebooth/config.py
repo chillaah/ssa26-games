@@ -24,23 +24,32 @@ class DetectorCfg:
     model: str = "yolo11n-seg.pt"  # use a TensorRT .engine on the Jetson
     device: Optional[str] = None  # None = auto, "mps", "cpu", "0" (CUDA)
     imgsz: int = 640
-    conf: float = 0.45  # only label confident detections in the souvenir photo
+    conf: float = 0.55  # bags scored 48%, real people 59%+ in booth tests
     half: bool = False
 
 
 @dataclass
 class DisplayCfg:
-    window_name: str = "CAUGHT BY SCOUTS - Dronebooth"
+    window_name: str = "Drone Booth - The Scouts"
     fullscreen: bool = False
     width: int = 1920
     height: int = 1080
+    # QR codes for The Scouts' socials, in the bottom corners of the live screen (same as
+    # Out of Frame's attract screen). icon = assets/brand/logos/<icon>.png.
+    socials: list = field(default_factory=lambda: [
+        {"name": "Instagram", "handle": "@thescouts.io",
+         "url": "https://www.instagram.com/thescouts.io/", "qr": "assets/qr_instagram.png",
+         "icon": "instagram"},
+        {"name": "LinkedIn", "handle": "Scouts - Autonomous Drones",
+         "url": "https://www.linkedin.com/company/scoutsapp/posts/", "qr": "assets/qr_linkedin.png",
+         "icon": "linkedin"},
+    ])
 
 
 @dataclass
 class BoothCfg:
     countdown_s: float = 3.0
     flash_s: float = 0.4
-    review_s: float = 45.0  # how long the photo + QR stay up before the next visitor
     max_subjects: int = 6  # label at most this many people per photo
     event: str = "SAFETY & SECURITY ASIA 2026"
     website: str = "thescouts.io"
@@ -55,15 +64,19 @@ class ShareCfg:
     # Leave empty to use this machine's LAN address. Set it when phones reach the
     # booth through something else, e.g. a tunnel: "https://booth.example.com".
     public_base_url: str = ""
+    # "cloudflare": publish the download page at a public https address (Cloudflare quick
+    # tunnel, needs internet and the cloudflared program) so any phone can open the QR code.
+    # "" = local network only. Ignored when public_base_url is set.
+    tunnel: str = ""
+    cloudflared: str = "cloudflared"  # path to the program; ~/.local/bin is also searched
+    tunnel_wait_s: float = 20.0  # at start, wait this long for the public address
     # True: visitors must enter name + email before they can download the photo.
     require_details: bool = True
     marketing_consent_text: str = (
         "Yes, The Scouts may email me about drone security products and events."
     )
-    privacy_text: str = (
-        "We use your name and email to send you this photo and follow up on your visit. "
-        "Your photo link expires after the event."
-    )
+    # True: the share link uses a Cloudflare quick tunnel, whose address changes each start.
+    privacy_text: str = "Your photo link expires after the event."
 
 
 @dataclass

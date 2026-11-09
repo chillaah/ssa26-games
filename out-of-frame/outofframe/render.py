@@ -1,4 +1,5 @@
-"""OpenCV drawing helpers. Everything is drawn onto one canvas at display resolution."""
+"""OpenCV drawing helpers. Everything is drawn onto one canvas at display resolution.
+Text, colours and logos come from brand.py (The Scouts brand: Poppins, Ebony/Dutch/Powder)."""
 from __future__ import annotations
 
 import math
@@ -7,31 +8,21 @@ from typing import Optional, Sequence, Tuple
 import cv2
 import numpy as np
 
-FONT = cv2.FONT_HERSHEY_DUPLEX
-FONT_BOLD = cv2.FONT_HERSHEY_TRIPLEX
+from . import brand as B
+from .brand import (ALERT, BLACK, CHARCOAL, CLEAR, DUTCH, EBONY, EBONY_DEEP, GREY, INK, POWDER,
+                    SILVER, WHITE, button, logo, rounded_rect, text, text_size)
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (40, 40, 235)
-GREEN = (90, 210, 60)
-YELLOW = (0, 215, 255)
-GREY = (150, 150, 150)
+FONT = B.MEDIUM
+FONT_REGULAR = B.REGULAR
+FONT_SEMIBOLD = B.SEMIBOLD
+FONT_BOLD = B.BOLD
+
+# Old names, mapped onto the brand palette.
+RED = ALERT
+GREEN = CLEAR
+YELLOW = DUTCH
 
 Color = Tuple[int, int, int]
-
-
-def text(img: np.ndarray, s: str, org: Tuple[int, int], scale: float, color: Color = WHITE,
-         thickness: int = 2, anchor: str = "center", font: int = FONT, shadow: bool = True) -> None:
-    (tw, th), base = cv2.getTextSize(s, font, scale, thickness)
-    x, y = org
-    if anchor == "center":
-        x, y = x - tw // 2, y + th // 2
-    elif anchor == "right":
-        x = x - tw
-    if shadow:
-        off = max(2, int(scale * 2))
-        cv2.putText(img, s, (x + off, y + off), font, scale, BLACK, thickness + 2, cv2.LINE_AA)
-    cv2.putText(img, s, (x, y), font, scale, color, thickness, cv2.LINE_AA)
 
 
 def fit(src_size: Tuple[int, int], dst_size: Tuple[int, int]) -> Tuple[float, int, int]:
@@ -53,10 +44,76 @@ def paste_fit(canvas: np.ndarray, img: np.ndarray, rect: Tuple[int, int, int, in
     return px, py, px + w, py + h
 
 
+def paste_fill(canvas: np.ndarray, img: np.ndarray, rect: Tuple[int, int, int, int],
+               radius: int = 0, keep: Optional[Sequence[int]] = None) -> Tuple[int, int, int, int]:
+    """Paste img filling rect (x1, y1, x2, y2): scaled to cover it and cropped, so there are no
+    bars. The crop is centred, or on keep (x1, y1, x2, y2 in img pixels, e.g. a person); if keep
+    can't fit in the crop, the whole img is shown on a blurred, darkened copy of itself. With
+    radius, the corners stay rounded (what's under them shows through)."""
+    x1, y1, x2, y2 = rect
+    dw, dh = x2 - x1, y2 - y1
+    ih, iw = img.shape[:2]
+    s = max(dw / iw, dh / ih)
+    cw, ch = min(iw, max(1, round(dw / s))), min(ih, max(1, round(dh / s)))  # source crop size
+    cx, cy = (iw - cw) // 2, (ih - ch) // 2
+    backdrop = False
+    if keep is not None:
+        kx1, ky1, kx2, ky2 = (int(v) for v in keep)
+        if kx2 - kx1 > cw or ky2 - ky1 > ch:
+            backdrop = True  # whole picture on a blurred copy of itself
+        else:
+            cx = min(max((kx1 + kx2 - cw) // 2, 0), iw - cw)
+            cy = min(max((ky1 + ky2 - ch) // 2, 0), ih - ch)
+    crop = img[cy:cy + ch, cx:cx + cw]
+    resized = cv2.resize(crop, (dw, dh), interpolation=cv2.INTER_AREA if s < 1 else cv2.INTER_LINEAR)
+    if backdrop:
+        k = max(31, (min(dw, dh) // 8) | 1)
+        resized = cv2.convertScaleAbs(cv2.GaussianBlur(resized, (k, k), 0), alpha=0.45)
+        paste_fit(resized, img, (0, 0, dw, dh))
+    if radius > 0:
+        mask = _corner_mask(dw, dh, radius)
+        np.copyto(canvas[y1:y2, x1:x2], resized, where=mask)
+    else:
+        canvas[y1:y2, x1:x2] = resized
+    return x1, y1, x2, y2
+
+
+_corner_masks: dict = {}
+
+
+def _corner_mask(w: int, h: int, r: int) -> np.ndarray:
+    """(h, w, 1) bool mask of a rounded rectangle, cached (it's the same every frame)."""
+    key = (w, h, r)
+    if key not in _corner_masks:
+        m = np.zeros((h, w), np.uint8)
+        cv2.rectangle(m, (r, 0), (w - 1 - r, h - 1), 255, -1)
+        cv2.rectangle(m, (0, r), (w - 1, h - 1 - r), 255, -1)
+        for c in ((r, r), (w - 1 - r, r), (r, h - 1 - r), (w - 1 - r, h - 1 - r)):
+            cv2.circle(m, c, r, 255, -1, cv2.LINE_AA)
+        _corner_masks[key] = (m > 127)[:, :, None]
+    return _corner_masks[key]
+
+
+def card_photo_rect(rect: Sequence[int]) -> Tuple[int, int, int, int]:
+    """The photo area card() draws in rect (inside the border, above the caption strip)."""
+    x1, y1, x2, y2 = rect
+    pad = max(6, (x2 - x1) // 30)
+    cap = max(28, (y2 - y1) // 7)
+    return x1 + pad, y1 + pad, x2 - pad, y2 - cap
+
+
+def card_inner_radius(rect: Sequence[int]) -> int:
+    """Corner radius of the photo area card() draws in rect."""
+    x1, _, x2, _ = rect
+    radius = max(8, (x2 - x1) // 28)
+    return max(4, radius - max(6, (x2 - x1) // 30) // 2)
+
+
 def dim_outside(canvas: np.ndarray, box: Tuple[int, int, int, int], amount: float = 0.55) -> None:
     x1, y1, x2, y2 = box
     inside = canvas[y1:y2, x1:x2].copy()
-    canvas[:] = (canvas * (1 - amount)).astype(np.uint8)
+    # In place with OpenCV's SIMD scaling: ~5x faster than numpy float math on the Jetson.
+    cv2.convertScaleAbs(canvas, dst=canvas, alpha=1 - amount)
     canvas[y1:y2, x1:x2] = inside
 
 
@@ -77,8 +134,11 @@ def brackets(img: np.ndarray, box: Tuple[int, int, int, int], color: Color, thic
 
 def progress_bar(img: np.ndarray, rect: Tuple[int, int, int, int], frac: float, color: Color) -> None:
     x1, y1, x2, y2 = rect
-    cv2.rectangle(img, (x1, y1), (x2, y2), (40, 40, 40), -1)
-    cv2.rectangle(img, (x1, y1), (x1 + int((x2 - x1) * max(0.0, min(1.0, frac))), y2), color, -1)
+    r = (y2 - y1) // 2
+    rounded_rect(img, rect, CHARCOAL, r)
+    fill = int((x2 - x1) * max(0.0, min(1.0, frac)))
+    if fill > 0:
+        rounded_rect(img, (x1, y1, x1 + max(fill, 2 * r), y2), color, r)
 
 
 def tint(img: np.ndarray, mask: np.ndarray, color: Color, alpha: float = 0.45) -> np.ndarray:
@@ -93,31 +153,26 @@ def tint(img: np.ndarray, mask: np.ndarray, color: Color, alpha: float = 0.45) -
 
 def stamp(img: np.ndarray, label: str, color: Color, center: Tuple[int, int], scale: float,
           angle: float = -12.0) -> None:
-    """Rubber-stamp style label, rotated."""
-    (tw, th), _ = cv2.getTextSize(label, FONT_BOLD, scale, max(2, int(scale * 2.5)))
+    """Rubber-stamp style label (rounded frame + bold Poppins), rotated."""
+    mask, _, ox, oy, l, r, cap = B._glyphs(label, FONT_BOLD, B._px(scale))
+    tw, th = r - l, cap
     pad = int(th * 0.6)
-    w, h = tw + pad * 2, th + pad * 2
-    layer = np.zeros((h * 2, w * 2, 3), np.uint8)
-    alpha = np.zeros((h * 2, w * 2), np.uint8)
-    ox, oy = w // 2, h // 2
     t = max(3, int(scale * 3))
-    for target, col in ((layer, color), (alpha, 255)):
-        cv2.rectangle(target, (ox, oy), (ox + w, oy + h), col, t, cv2.LINE_AA)
-        cv2.putText(target, label, (ox + pad, oy + pad + th), FONT_BOLD, scale, col,
-                    max(2, int(scale * 2.5)), cv2.LINE_AA)
+    w, h = tw + pad * 2 + t * 2, th + pad * 2 + t * 2
+    alpha = np.zeros((h * 2, w * 2), np.uint8)
+    ox0, oy0 = w // 2, h // 2
+    frame = B._round_mask(w, h, int(h * 0.22))
+    inner = B._round_mask(w - 2 * t, h - 2 * t, max(0, int(h * 0.22) - t))
+    frame[t:h - t, t:w - t] = cv2.subtract(frame[t:h - t, t:w - t], inner)
+    alpha[oy0:oy0 + h, ox0:ox0 + w] = frame
+    # text: pen at (ox0 + t + pad - l, baseline oy0 + t + pad + th)
+    px, py = ox0 + t + pad - l + ox, oy0 + t + pad + th + oy
+    mh, mw = mask.shape
+    region = alpha[py:py + mh, px:px + mw]
+    np.maximum(region, mask[:region.shape[0], :region.shape[1]], out=region)
     M = cv2.getRotationMatrix2D((w, h), angle, 1.0)
-    layer = cv2.warpAffine(layer, M, (w * 2, h * 2))
-    alpha = cv2.warpAffine(alpha, M, (w * 2, h * 2)).astype(np.float32)[..., None] / 255.0 * 0.9
-    cx, cy = center
-    x1, y1 = cx - w, cy - h
-    # clip to image
-    ix1, iy1 = max(x1, 0), max(y1, 0)
-    ix2, iy2 = min(x1 + w * 2, img.shape[1]), min(y1 + h * 2, img.shape[0])
-    if ix1 >= ix2 or iy1 >= iy2:
-        return
-    sl = (slice(iy1 - y1, iy2 - y1), slice(ix1 - x1, ix2 - x1))
-    roi = img[iy1:iy2, ix1:ix2].astype(np.float32)
-    img[iy1:iy2, ix1:ix2] = (roi * (1 - alpha[sl]) + layer[sl].astype(np.float32) * alpha[sl]).astype(np.uint8)
+    alpha = cv2.warpAffine(alpha, M, (w * 2, h * 2))
+    B.blend_mask(img, alpha, center[0] - w, center[1] - h, color, 0.92)
 
 
 def grid_rects(n: int, area: Tuple[int, int, int, int], aspect: float, gap: int = 24):
@@ -142,18 +197,43 @@ def grid_rects(n: int, area: Tuple[int, int, int, int], aspect: float, gap: int 
 
 
 def card(canvas: np.ndarray, img: Optional[np.ndarray], rect: Sequence[int], label: str,
-         border: Color = WHITE) -> Tuple[int, int, int, int]:
-    """Polaroid-ish card with a caption strip. Returns the image rect."""
+         border: Color = WHITE, fill: bool = False,
+         keep: Optional[Sequence[int]] = None) -> Tuple[int, int, int, int]:
+    """Rounded photo card (thescouts.io style) with a caption strip. Returns the image rect.
+    fill: crop img to fill the photo area (see paste_fill) instead of letterboxing it."""
     x1, y1, x2, y2 = rect
-    cv2.rectangle(canvas, (x1, y1), (x2, y2), (245, 245, 245), -1)
+    radius = max(8, (x2 - x1) // 28)
+    rounded_rect(canvas, rect, WHITE, radius)
     pad = max(6, (x2 - x1) // 30)
     cap = max(28, (y2 - y1) // 7)
-    inner = (x1 + pad, y1 + pad, x2 - pad, y2 - cap)
-    cv2.rectangle(canvas, inner[:2], inner[2:], (30, 30, 30), -1)
+    inner = card_photo_rect(rect)
+    rounded_rect(canvas, inner, CHARCOAL, card_inner_radius(rect))
     shown = inner
     if img is not None:
-        shown = paste_fit(canvas, img, inner)
-    text(canvas, label, ((x1 + x2) // 2, y2 - cap // 2), max(0.5, cap / 45), (40, 40, 40), 2,
+        if fill:
+            shown = paste_fill(canvas, img, inner, card_inner_radius(rect), keep)
+        else:
+            shown = paste_fit(canvas, img, inner)
+    scale = max(0.5, cap / 45)
+    room = (x2 - x1) - 4 * pad  # long names shrink to fit inside the card
+    tw = text_size(label, scale, FONT_SEMIBOLD)[0]
+    if tw > room:
+        scale *= room / tw
+    text(canvas, label, ((x1 + x2) // 2, y2 - cap // 2), scale, INK, font=FONT_SEMIBOLD,
          shadow=False)
-    cv2.rectangle(canvas, (x1, y1), (x2, y2), border, 4, cv2.LINE_AA)
+    if border != WHITE:
+        rounded_rect(canvas, rect, border, radius, thickness=5)
     return shown
+
+
+def icon_label(img: np.ndarray, icon: Optional[str], label: str, center: Tuple[int, int],
+               scale: float, color: Color) -> None:
+    """A label with a small logo (assets/brand/logos/<icon>.png) in front, centred as a group."""
+    tw, cap = text_size(label, scale, FONT_SEMIBOLD)
+    size = int(cap * 1.6)
+    gap = int(cap * 0.5) if icon else 0
+    x = center[0] - (tw + (size + gap if icon else 0)) // 2
+    if icon:
+        logo(img, icon, (x, center[1]), size, anchor="left")
+        x += size + gap
+    text(img, label, (x, center[1] + cap // 2), scale, color, anchor="left", font=FONT_SEMIBOLD)

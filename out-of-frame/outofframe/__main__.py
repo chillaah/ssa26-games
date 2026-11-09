@@ -2,16 +2,20 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import logging
+import os
+import sys
 import time
-
-import cv2
 
 from .camera import Camera
 from .config import load_config
 from .detector import PersonDetector
 from .framer import FollowingFramer, make_framer
 from .game import Game
+from .pose import Gallery, PoseEstimator
+from .share import PhotoStore, ShareServer
+from .window import FrameGuard, GameWindow, quit_on_signals
 
 
 def main() -> None:
@@ -19,6 +23,7 @@ def main() -> None:
     ap.add_argument("--config", default="configs/mac.yaml")
     ap.add_argument("--source", help="override camera source (index, rtsp://, gst:..., file)")
     ap.add_argument("--fullscreen", action="store_true")
+    ap.add_argument("--no-pose", action="store_true", help="no gallery: skip the bonus pose round (and pose matching)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -29,48 +34,71 @@ def main() -> None:
         cfg.camera.source = int(args.source) if args.source.isdigit() else args.source
     if args.fullscreen:
         cfg.display.fullscreen = True
+    if args.no_pose:
+        cfg.pose.enabled = False
 
-    detector = PersonDetector(cfg.detector)
-    detector.warmup()
-    camera = Camera(cfg.camera).start()
-    framer = make_framer(cfg.framer, cfg.camera.mirror)
-    steady = None
-    if isinstance(framer, FollowingFramer) and cfg.framer.virtual.steady_view:
-        from .steady import SteadyView
+    quit_on_signals()
+    # Everything started below is stopped again in reverse order, however the game ends:
+    # close button, q/Esc, closing the window, Ctrl+C, pkill or closing the terminal.
+    with contextlib.ExitStack() as stack:
+        try:
+            detector = PersonDetector(cfg.detector)
+            detector.warmup()
+            camera = Camera(cfg.camera).start()
+            stack.callback(camera.stop)
+            framer = make_framer(cfg.framer, cfg.camera.mirror)
+            stack.callback(framer.close)  # centres the gimbal
+            steady = None
+            if isinstance(framer, FollowingFramer) and cfg.framer.virtual.steady_view:
+                from .steady import SteadyView
 
-        steady = SteadyView(framer.gimbal, cfg.framer.virtual,
-                            (cfg.framer.siyi.home_yaw, cfg.framer.siyi.home_pitch), cfg.camera.mirror)
-        steady.calibrate()
-    game = Game(cfg, framer, detector)
+                steady = SteadyView(framer.gimbal, cfg.framer.virtual,
+                                    (cfg.framer.siyi.home_yaw, cfg.framer.siyi.home_pitch),
+                                    cfg.camera.mirror)
+                steady.calibrate()
+            poser = gallery = None
+            if cfg.pose.enabled:
+                # The bonus round only needs the cached gallery; the pose model is loaded for
+                # matching after each snap, which also indexes new pictures.
+                if cfg.pose.match_each_snap:
+                    poser = PoseEstimator(cfg.pose, cfg.detector.device, cfg.detector.half)
+                gallery = Gallery.load(cfg.pose.gallery_dir, poser)
+                if not gallery.items:
+                    logging.warning("No bonus round: no usable images in %s", cfg.pose.gallery_dir)
+            share = None
+            if cfg.share.enabled:
+                share = ShareServer(PhotoStore(cfg.share.data_dir), cfg.share).start()
+                stack.callback(share.stop)
+            game = Game(cfg, framer, detector, poser=poser, gallery=gallery, share=share)
 
-    win = cfg.display.window_name
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
-    fullscreen = cfg.display.fullscreen
-    cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN,
-                          cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
-    if not fullscreen:
-        cv2.resizeWindow(win, cfg.display.width // 2, cfg.display.height // 2)
-
-    try:
-        while not game.quit:
-            frame, frame_t = camera.read()
-            if steady is not None and frame is not None:
-                frame = steady.apply(frame, frame_t)
-            now = time.monotonic()
-            cv2.imshow(win, game.step(now, frame))
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("f"):
-                fullscreen = not fullscreen
-                cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN,
-                                      cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
-            elif key != 255:
-                game.on_key(key, now)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        camera.stop()
-        framer.close()
-        cv2.destroyAllWindows()
+            window = GameWindow(cfg.display.window_name, cfg.display.fullscreen,
+                                (cfg.display.width, cfg.display.height))
+            stack.callback(window.destroy)
+            guard = FrameGuard()
+            while not (game.quit or window.close_requested):
+                now = time.monotonic()
+                frame, frame_t = camera.read()
+                frame = guard.fresh(frame, frame_t, now)
+                try:
+                    if steady is not None and frame is not None:
+                        frame = steady.apply(frame, frame_t)
+                    window.show(game.step(now, frame))
+                    key = window.poll()
+                    if key != 255:
+                        game.on_key(key, now)
+                except Exception:
+                    guard.error(now)
+                    game.reset(now)
+        except KeyboardInterrupt:
+            pass
+        logging.info("Shutting down")
+    logging.info("Closed cleanly")
+    # Everything is stopped and saved. Exit now with code 0: native threads (GStreamer, TensorRT)
+    # can abort Python's own teardown, and a non-zero exit would make the launcher restart the game.
+    logging.shutdown()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

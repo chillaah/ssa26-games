@@ -8,7 +8,7 @@ camera:
 detector:
   model: yolo11n-seg.pt
   device: mps
-  conf: 0.45              # only label confident detections in the souvenir photo
+  conf: 0.55              # a backpack scored 48%; real people 59%+ in booth tests
 
 booth:
   event: SAFETY & SECURITY ASIA 2026

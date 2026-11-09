@@ -87,14 +87,31 @@ class DetectorCfg:
 
 
 @dataclass
+class PoseCfg:
+    # The gallery feeds the bonus round (a picture to copy). Turns itself off if the gallery
+    # folder has no usable images.
+    enabled: bool = True
+    # Also show the gallery picture closest to the player's pose after each dodge snap.
+    match_each_snap: bool = False
+    model: str = "yolo11n-pose.pt"
+    conf: float = 0.30
+    gallery_dir: str = "gallery"
+    show_s: float = 1.6  # how long the match is on screen
+    min_score: float = 0.6  # 0..1; below this no match is shown
+    min_limbs: int = 4  # of 10 (arms, legs, torso, head); fewer visible -> no match shown
+    max_neutral: float = 0.68  # player standing still (closer than this to arms-down) -> no match
+
+
+@dataclass
 class GameCfg:
-    shots: int = 5
+    shots: int = 4  # dodge rounds (the box moves); the bonus pose round comes after them
+    bonus_pose: bool = True  # final round: copy a gallery picture's pose for the souvenir photo
+    bonus_s: float = 6.0  # time to get into the pose before the photo
     get_ready_s: float = 3.0
-    lock_s_first: float = 1.2  # "locking on" warning before each snap (round 1)
-    lock_s_final: float = 0.7
+    lock_s_first: float = 0.9  # "locking on" warning before each snap (round 1)
+    lock_s_final: float = 0.5  # (the bonus round uses bonus_s instead)
     flash_s: float = 0.35
     reveal_per_shot_s: float = 1.1
-    results_s: float = 15.0
     # A person counts as "in the photo" once this much of the box is covered by body pixels.
     min_body_frac: float = 0.001
     min_body_px: int = 80
@@ -106,14 +123,50 @@ class GameCfg:
 
 @dataclass
 class DisplayCfg:
-    window_name: str = "OUT OF FRAME - The Scouts"
+    window_name: str = "Out of Frame - The Scouts"
     fullscreen: bool = False
     width: int = 1920
     height: int = 1080
-    brand: str = "THE SCOUTS"
-    # BGR
-    accent: tuple = (255, 200, 0)
+    logo: str = "horizontal-white"  # assets/brand/logos/<logo>.png, shown in the HUD
+    event: str = "Safety & Security Asia 2026"  # printed on the souvenir collage
+    # BGR. Default is the brand's Dutch (#ffefca); see outofframe/brand.py for the palette.
+    accent: tuple = (202, 239, 255)
     show_live_detections: bool = False  # debug overlay, toggle with "d"
+    # Shown with QR codes on the attract screen. Regenerate the QR images with tools/make_qr.py;
+    # icon = assets/brand/logos/<icon>.png (tools/make_social_icons.py).
+    socials: list = field(default_factory=lambda: [
+        {"name": "Instagram", "handle": "@thescouts.io",
+         "url": "https://www.instagram.com/thescouts.io/", "qr": "assets/qr_instagram.png",
+         "icon": "instagram"},
+        {"name": "LinkedIn", "handle": "Scouts - Autonomous Drones",
+         "url": "https://www.linkedin.com/company/scoutsapp/posts/", "qr": "assets/qr_linkedin.png",
+         "icon": "linkedin"},
+    ])
+
+
+@dataclass
+class ShareCfg:
+    # Results QR -> phone page where the player leaves name + email and downloads the collage.
+    enabled: bool = True
+    host: str = "0.0.0.0"
+    port: int = 8081  # the drone booth uses 8080, so both can run on one machine
+    # Leave empty to use this machine's LAN address. Set it when phones reach the
+    # game through something else, e.g. a tunnel: "https://game.example.com".
+    public_base_url: str = ""
+    # "cloudflare": publish the download page at a public https address (Cloudflare quick
+    # tunnel, needs internet and the cloudflared program) so any phone can open the QR code.
+    # "" = local network only. Ignored when public_base_url is set.
+    tunnel: str = ""
+    cloudflared: str = "cloudflared"  # path to the program; ~/.local/bin is also searched
+    tunnel_wait_s: float = 20.0  # at start, wait this long for the public address
+    # True: players must enter name + email before they can download the photo.
+    require_details: bool = True
+    data_dir: str = "sessions/share"  # collages + leads.csv
+    marketing_consent_text: str = (
+        "Yes, The Scouts may email me about drone security products and events."
+    )
+    # True: the share link uses a Cloudflare quick tunnel, whose address changes each start.
+    privacy_text: str = "Your photo link expires after the event."
 
 
 @dataclass
@@ -121,8 +174,10 @@ class Config:
     camera: CameraCfg = field(default_factory=CameraCfg)
     framer: FramerCfg = field(default_factory=FramerCfg)
     detector: DetectorCfg = field(default_factory=DetectorCfg)
+    pose: PoseCfg = field(default_factory=PoseCfg)
     game: GameCfg = field(default_factory=GameCfg)
     display: DisplayCfg = field(default_factory=DisplayCfg)
+    share: ShareCfg = field(default_factory=ShareCfg)
 
 
 def _merge(obj: Any, data: dict, path: str = "") -> Any:

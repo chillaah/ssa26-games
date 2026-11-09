@@ -73,12 +73,23 @@ class Booth:
         self.share = share
         self.state = LIVE
         self.state_t = 0.0
+        self._socials = []  # (social, QR image) in the corners of the live screen
+        for soc in cfg.display.socials:
+            qr = cv2.imread(soc["qr"])
+            if qr is None:
+                log.warning("QR image %s not found; showing %s without it", soc["qr"], soc["name"])
+            self._socials.append((soc, qr))
         self.quit = False
         self.photo: Optional[np.ndarray] = None
         self.qr: Optional[np.ndarray] = None
         self.url = ""
         self.notice = ""
         self.notice_until = 0.0
+
+    def reset(self, now: float) -> None:
+        """Back to the live screen (used after an unexpected error)."""
+        self.notice = ""
+        self._set(LIVE, now)
 
     def _set(self, state: str, now: float) -> None:
         self.state, self.state_t = state, now
@@ -98,14 +109,14 @@ class Booth:
         d = self.cfg.display
         b = self.cfg.booth
         canvas = np.zeros((d.height, d.width, 3), np.uint8)
-        if self.state == REVIEW:
-            if now - self.state_t >= b.review_s:
-                self._set(LIVE, now)
-            else:
-                self._draw_review(canvas, now)
-                return canvas
+        if self.state == REVIEW:  # stays up until SPACE (next visitor) or R (retake)
+            self._draw_review(canvas, now)
+            return canvas
         if frame is None:
-            R.text(canvas, "Waiting for camera...", (d.width // 2, d.height // 2), 1.5)
+            canvas[:] = R.INK
+            R.logo(canvas, "horizontal-white", (d.width // 2, d.height // 2 - 90), 110)
+            R.text(canvas, "Waiting for camera...", (d.width // 2, d.height // 2 + 60), 1.3,
+                   R.SILVER, font=R.FONT_REGULAR)
             return canvas
 
         dt = now - self.state_t
@@ -136,7 +147,7 @@ class Booth:
         self.photo = compose_photo(frame, people, meta, b.max_subjects)
         pid = self.store.save(self.photo)
         self.url = self.share.url_for(pid)
-        self.qr = qr_image(self.url, 440)
+        self.qr = qr_image(self.url, 400)
         log.info("photo %s: %d people -> %s", pid, len(people), self.url)
         self._set(FLASH, now)
 
@@ -149,47 +160,71 @@ class Booth:
         people = self.scanner.people
         counting = self.state == COUNTDOWN
         draw_subjects(view, people, "LOCKING ON" if counting else "SCANNING...",
-                      THREAT if counting else SCAN, b.max_subjects, outline=False)
+                      THREAT if counting else SCAN, b.max_subjects)
         blink = int(now * 2) % 2 == 0
-        hud_frame(view, "SCOUTS AI  //  LIVE", datetime.now().strftime("%H:%M:%S ") + b.timezone_label,
-                  rec_on=blink)
+        # Keep the clock clear of the close button (top right of the screen, see window.py).
+        hud_frame(view, "SCOUTS AUTONOMOUS DRONES  //  LIVE",
+                  datetime.now().strftime("%H:%M:%S ") + b.timezone_label, rec_on=blink,
+                  right_inset=int(150 * view.shape[1] / W))
         R.paste_fit(canvas, view, (0, 0, W, H))
 
         if self.state == LIVE:
-            R.text(canvas, "CAUGHT BY SCOUTS", (W // 2, int(H * 0.82)), 2.6, (255, 255, 255), 6,
-                   font=R.FONT_BOLD)
-            msg = "PRESS SPACE TO GET CAUGHT"
+            self._draw_socials(canvas)
+            R.text(canvas, "Drone Booth", (W // 2, int(H * 0.80)), 2.8, R.WHITE, font=R.FONT_BOLD)
             if self.notice and now < self.notice_until:
-                msg = self.notice
-            R.text(canvas, msg, (W // 2, int(H * 0.91)), 1.4, SCAN, 3)
+                R.button(canvas, self.notice, (W // 2, int(H * 0.905)), 1.2, bg=THREAT)
+            else:
+                R.button(canvas, "Press SPACE to get captured", (W // 2, int(H * 0.905)), 1.3)
         elif self.state == COUNTDOWN:
             left = max(1, int(np.ceil(b.countdown_s - dt)))
-            R.text(canvas, str(left), (W // 2, H // 2), 10.0, THREAT, 18, font=R.FONT_BOLD)
-            R.text(canvas, "STRIKE A POSE!", (W // 2, int(H * 0.82)), 2.2, (255, 255, 255), 5)
+            R.text(canvas, str(left), (W // 2, H // 2), 10.0, THREAT, font=R.FONT_BOLD)
+            R.text(canvas, "Strike a pose!", (W // 2, int(H * 0.82)), 2.2, R.WHITE, font=R.FONT_BOLD)
         elif self.state == FLASH:
             a = max(0.0, 1.0 - dt / b.flash_s)
             canvas[:] = cv2.addWeighted(canvas, 1 - a, np.full_like(canvas, 255), a, 0)
 
-    def _draw_review(self, canvas: np.ndarray, now: float) -> None:
+    def _draw_socials(self, canvas: np.ndarray) -> None:
+        """Instagram bottom left, LinkedIn bottom right: QR on a white card, logo + name below."""
         d = self.cfg.display
         W, H = d.width, d.height
-        canvas[:] = (22, 18, 16)
-        R.text(canvas, "THREAT DETECTED", (60, 95), 2.4, THREAT, 6, anchor="left", font=R.FONT_BOLD)
-        R.text(canvas, "You've been caught by The Scouts drone.", (60, 165), 1.2, (230, 230, 230), 2,
-               anchor="left")
-        if self.photo is not None:
-            x1, y1, x2, y2 = R.paste_fit(canvas, self.photo, (60, 210, W - 560, H - 60))
-            cv2.rectangle(canvas, (x1, y1), (x2, y2), (60, 60, 60), 2)
+        q, p = 170, 12
+        y = H - 130 - q
+        for i, (soc, qr) in enumerate(self._socials[:2]):
+            x = 150 if i == 0 else W - 150 - q
+            cx = x + q // 2
+            if qr is not None:
+                R.rounded_rect(canvas, (x - p, y - p, x + q + p, y + q + p), R.WHITE, p * 2)
+                canvas[y:y + q, x:x + q] = cv2.resize(qr, (q, q), interpolation=cv2.INTER_NEAREST)
+            R.icon_label(canvas, soc.get("icon"), soc["name"], (cx, y + q + p + 30), 0.85, R.DUTCH)
+            R.text(canvas, soc["handle"], (cx, y + q + p + 66), 0.65, R.WHITE, font=R.FONT_REGULAR)
 
-        px = W - 500
-        cx = px + 220
-        R.text(canvas, "SCAN TO GET", (cx, 270), 1.6, (255, 255, 255), 4)
-        R.text(canvas, "YOUR PHOTO", (cx, 330), 1.6, (255, 255, 255), 4)
-        if self.qr is not None:
-            q = self.qr.shape[0]
-            canvas[380:380 + q, cx - q // 2:cx + q // 2] = self.qr
-            cv2.rectangle(canvas, (cx - q // 2 - 6, 374), (cx + q // 2 + 6, 386 + q), THREAT, 6)
-        R.text(canvas, self.url, (cx, 870), 0.6, (170, 170, 170), 1)
-        left = max(0, int(self.cfg.booth.review_s - (now - self.state_t)))
-        R.text(canvas, f"Next visitor in {left}s", (cx, 940), 1.0, (200, 200, 200), 2)
-        R.text(canvas, "SPACE: next   R: retake", (cx, 990), 0.8, (130, 130, 130), 2)
+    def _draw_review(self, canvas: np.ndarray, now: float) -> None:
+        """The 3:4 photo on the left; result and the download QR in a column on the right
+        (same layout as Out of Frame's results screen)."""
+        d = self.cfg.display
+        W, H = d.width, d.height
+        canvas[:] = R.INK
+        if self.photo is not None:
+            x1, y1, x2, y2 = R.paste_fit(canvas, self.photo, (90, 60, 810, H - 60))
+            R.rounded_rect(canvas, (x1 - 3, y1 - 3, x2 + 3, y2 + 3), R.CHARCOAL, 8, thickness=3)
+        cx = (900 + W - 90) // 2
+        R.text(canvas, "THREAT DETECTED", (cx, 175), 2.4, THREAT, font=R.FONT_BOLD, shadow=False)
+        R.text(canvas, "You've been captured by Scouts", (cx, 245), 1.1, R.SILVER,
+               font=R.FONT_REGULAR, shadow=False)
+        draw_qr_panel(canvas, self.qr, cx, 400)
+        R.text(canvas, "SPACE: next visitor   \u00b7   R: retake", (cx, H - 70), 0.85, R.SILVER,
+               font=R.FONT_REGULAR, shadow=False)
+
+
+def draw_qr_panel(canvas: np.ndarray, qr: Optional[np.ndarray], cx: int, top: int) -> None:
+    """ "Scan to get your photo" over the QR on a white card, with a hint below."""
+    if qr is None:
+        return
+    q = qr.shape[0]
+    R.text(canvas, "Scan to get your photo", (cx, top), 1.35, R.DUTCH, font=R.FONT_SEMIBOLD,
+           shadow=False)
+    y = top + 40
+    R.rounded_rect(canvas, (cx - q // 2 - 24, y, cx + q // 2 + 24, y + q + 48), R.WHITE, 22)
+    canvas[y + 24:y + 24 + q, cx - q // 2:cx - q // 2 + q] = qr
+    R.text(canvas, "Point your phone camera at the code", (cx, y + q + 98), 0.8, R.GREY,
+           font=R.FONT_REGULAR, shadow=False)

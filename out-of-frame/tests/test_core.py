@@ -215,24 +215,370 @@ def test_steady_view_cancels_gimbal_shift():
 
     rng = np.random.default_rng(0)
     scene = cv2.GaussianBlur(rng.random((720, 1280)).astype(np.float32), (15, 15), 4)
-    cfg = VirtualFramerCfg(steady_latency_s=0.0)
-    k = cfg.steady_px_per_deg
-
-    def steadied(dyaw, dpitch, mirror):
+    def steadied(cfg, dyaw, dpitch, mirror):
+        k = cfg.steady_px_per_deg
         g = Gimbal()
         view = SteadyView(g, cfg, (0, 0), mirror)
         view.ref = (-2.4, 180.0)
         g.attitude = (-2.4 + dyaw, wrap(180.0 + dpitch), 0.0)
-        # +yaw/+pitch slides the unmirrored image left/up
-        raw = np.roll(scene, (-round(k * dpitch), -round(k * dyaw)), axis=(0, 1))
+        # +yaw/+pitch slides the unmirrored image right/down, or left/up when inverted
+        sy = 1 if cfg.follow_invert_pitch else -1
+        sx = 1 if cfg.follow_invert_yaw else -1
+        raw = np.roll(scene, (-sy * round(k * dpitch), -sx * round(k * dyaw)), axis=(0, 1))
         img = cv2.flip(raw, 1) if mirror else raw
         return view.apply(img, 1.0)
 
     def wrap(a):
         return (a + 180) % 360 - 180
 
-    for mirror in (False, True):
-        still = steadied(0, 0, mirror)
-        for dyaw, dpitch in [(5, 0), (-4, 3), (0, -3.5)]:
-            (dx, dy), _ = cv2.phaseCorrelate(still, steadied(dyaw, dpitch, mirror))
-            assert abs(dx) < 2 and abs(dy) < 2, (mirror, dyaw, dpitch, dx, dy)
+    for invert in (False, True):
+        cfg = VirtualFramerCfg(steady_latency_s=0.0, follow_invert_yaw=invert, follow_invert_pitch=invert)
+        for mirror in (False, True):
+            still = steadied(cfg, 0, 0, mirror)
+            for dyaw, dpitch in [(5, 0), (-4, 3), (0, -3.5)]:
+                (dx, dy), _ = cv2.phaseCorrelate(still, steadied(cfg, dyaw, dpitch, mirror))
+                assert abs(dx) < 2 and abs(dy) < 2, (invert, mirror, dyaw, dpitch, dx, dy)
+
+
+def _pose_kpts(**over):
+    """COCO-17 keypoints of a standing figure, with some joints moved."""
+    k = {0: (300, 150), 5: (350, 235), 6: (250, 235), 7: (372, 330), 8: (228, 330), 9: (378, 420),
+         10: (222, 420), 11: (330, 420), 12: (270, 420), 13: (335, 560), 14: (265, 560),
+         15: (340, 700), 16: (260, 700)}
+    k.update({int(i[1:]): v for i, v in over.items()})
+    return np.array([k.get(i, (0, 0)) for i in range(17)], float), \
+        np.array([1.0 if i in k else 0.0 for i in range(17)])
+
+
+POSES = {
+    "t_pose": dict(j7=(445, 235), j8=(155, 235), j9=(540, 235), j10=(60, 235)),
+    "hands_up": dict(j7=(385, 140), j8=(215, 140), j9=(395, 45), j10=(205, 45)),
+    "star_jump": dict(j7=(430, 150), j8=(170, 150), j9=(505, 70), j10=(95, 70), j13=(395, 555),
+                      j14=(205, 555), j15=(455, 690), j16=(145, 690)),
+    "squat": dict(j11=(340, 500), j12=(260, 500), j13=(440, 560), j14=(160, 560), j15=(410, 700),
+                  j16=(190, 700)),
+    "disco": dict(j8=(215, 140), j10=(170, 45), j7=(420, 330), j9=(345, 410)),
+}
+
+
+def test_pose_similarity_and_gallery_pick(tmp_path):
+    import json
+
+    import cv2
+
+    from outofframe.pose import Gallery, Pose, mirror, similarity
+
+    index = {}
+    for name, over in POSES.items():
+        k, c = _pose_kpts(**over)
+        cv2.imwrite(str(tmp_path / f"{name}.png"), np.zeros((8, 8, 3), np.uint8))
+        index[f"{name}.png"] = {"manual": True, "kpts": k.tolist(), "conf": c.tolist(),
+                                "bbox": [0, 0, 600, 800]}
+    (tmp_path / "index.json").write_text(json.dumps(index))
+
+    def pose(name):
+        return Pose(*_pose_kpts(**POSES[name]), (0, 0, 600, 800))
+
+    t, up = pose("t_pose"), pose("hands_up")
+    assert similarity(t, t) > 0.99
+    assert similarity(t, up) < 0.8
+    assert similarity(t, Pose(t.kpts * 2 + 100, t.conf, t.bbox)) > 0.99  # position/size don't matter
+
+    gallery = Gallery.load(tmp_path, None)
+    assert len(gallery.items) == len(POSES)
+    for name in ("star_jump", "squat", "disco"):
+        p = pose(name)
+        noisy = Pose(p.kpts + np.random.default_rng(0).normal(0, 6, p.kpts.shape), p.conf, p.bbox)
+        item, score, _ = gallery.best(noisy)
+        assert item.path.stem == name and score > 0.9
+    d = pose("disco")
+    item, _, mirrored = gallery.best(Pose(*mirror(d.kpts, d.conf), d.bbox))
+    assert item.path.stem == "disco" and mirrored
+    # Excluded pictures are never picked again.
+    item, _, _ = gallery.best(d, exclude={gallery.folder / "disco.png"})
+    assert item.path.stem != "disco"
+
+
+def test_brand_text_and_logo_draw():
+    from outofframe import brand as B
+
+    img = np.zeros((200, 600, 3), np.uint8)
+    w, cap = B.text_size("OUT OF FRAME", 1.0, B.BOLD)
+    assert 150 < w < 300 and 15 < cap < 30  # about as wide as the old Hershey text
+    B.text(img, "OUT OF FRAME", (300, 60), 1.0, B.DUTCH, font=B.BOLD)
+    assert img[40:80, 150:450].max() > 200
+    B.text(img, "edge", (-50, -50), 2.0)  # off-canvas text is clipped, not an error
+    x1, y1, x2, y2 = B.logo(img, "horizontal-white", (300, 150), 60)
+    assert y2 - y1 == 60 and img[120:180, x1:x2].max() > 200
+
+
+def test_close_button_needs_two_taps():
+    import cv2
+
+    from outofframe import window as W
+
+    win = W.GameWindow.__new__(W.GameWindow)  # no real window needed for the tap logic
+    win.close_requested, win._armed_until = False, 0.0
+    img = np.zeros((720, 1280, 3), np.uint8)
+    win._draw_close(img)
+    cx, cy, r = win._btn
+    assert cx > 1200 and cy < 80 and img[cy, cx].any()
+    win._on_mouse(cv2.EVENT_LBUTTONDOWN, 10, 10, 0, None)  # elsewhere: ignored
+    assert not win.armed and not win.close_requested
+    win._on_mouse(cv2.EVENT_LBUTTONDOWN, cx, cy, 0, None)  # first tap arms
+    assert win.armed and not win.close_requested
+    win._on_mouse(cv2.EVENT_LBUTTONDOWN, cx, cy, 0, None)  # second tap closes
+    assert win.close_requested
+
+
+def test_four_dodge_rounds_then_bonus_pose_then_collage_and_qr(tmp_path):
+    import json
+    import urllib.request
+
+    import cv2
+
+    from outofframe import game as G
+    from outofframe.config import Config
+    from outofframe.pose import Gallery
+    from outofframe.share import PhotoStore, ShareServer
+
+    gal = tmp_path / "gallery"
+    gal.mkdir()
+    k, c = _pose_kpts()
+    for name in ("ninja_1", "robot_1"):
+        cv2.imwrite(str(gal / f"{name}.jpg"), np.full((400, 300, 3), 200, np.uint8))
+    (gal / "index.json").write_text(json.dumps({
+        f"{n}.jpg": {"manual": True, "kpts": k.tolist(), "conf": c.tolist(), "bbox": [0, 0, 300, 400]}
+        for n in ("ninja_1", "robot_1")}))
+
+    class Detector:  # one person standing far left, never in the box's middle
+        def detect(self, frame):
+            mask = np.zeros(frame.shape[:2], bool)
+            mask[200:600, 0:40] = True
+            return [Person((0, 200, 40, 600), 0.9, mask)]
+
+    cfg = Config()
+    cfg.game.save_dir = str(tmp_path / "sessions")
+    cfg.share.data_dir = str(tmp_path / "share")
+    cfg.share.port = 0  # any free port
+    share = ShareServer(PhotoStore(cfg.share.data_dir), cfg.share).start()
+    try:
+        game = G.Game(cfg, VirtualFramer(cfg.framer.virtual, random.Random(1)), Detector(),
+                      rng=random.Random(2), gallery=Gallery.load(gal, None), share=share)
+        frame = np.full((720, 1280, 3), 90, np.uint8)
+        game.start(0.0)
+        seen, t = [], 0.0
+        while game.state not in (G.RESULTS,) and t < 120:
+            t += 0.05
+            game.step(t, frame)
+            if not seen or seen[-1] != game.state:
+                seen.append(game.state)
+            if game.state == G.REVEAL:
+                game.on_key(ord(" "), t)
+        assert len(game.shots) == 4
+        assert seen.count(G.LOCKING) == 4 and G.POSE not in seen
+        assert seen.index(G.BONUS) > max(i for i, s in enumerate(seen) if s == G.LOCKING)
+        assert game.bonus_item is not None and game.bonus_photo is not None
+        assert game.collage.shape == (1440, 1080, 3)  # 3:4
+        assert game.share_qr is not None and game.share_url.startswith(share.base_url)
+        pid = game.share_url.rsplit("/", 1)[1]
+        assert share.store.path(pid) is not None
+        page = urllib.request.urlopen(f"http://127.0.0.1:{share.httpd.server_address[1]}/p/{pid}")
+        assert b"Out of Frame" in page.read()
+        assert (game.session_dir / "collage.jpg").exists()
+        game.step(t + 0.05, frame)  # results screen draws
+        game.step(t + 600, frame)  # ...and stays up, no timer
+        assert game.state == G.RESULTS
+        game.on_key(ord(" "), t + 601)  # SPACE: back to the start screen
+        assert game.state == G.ATTRACT
+        game.on_key(ord(" "), t + 602)  # SPACE again: new game
+        assert game.state == G.GET_READY
+        game.on_key(ord("q"), t + 603)
+        assert game.quit
+    finally:
+        share.stop()
+
+
+def test_bonus_crop_frames_the_players_not_the_background():
+    from outofframe.collage import BONUS_ASPECT, bonus_crop, players
+
+    near, also_near, far = (900, 100, 1200, 720), (600, 150, 880, 720), (100, 300, 180, 450)
+    assert players([near, also_near, far]) == [near, also_near]
+    frame = np.zeros((720, 1280, 3), np.uint8)
+    crop = bonus_crop(frame, players([near, far]))
+    assert abs(crop.shape[1] / crop.shape[0] - BONUS_ASPECT) < 0.01
+    # A group wider than the photo: centred on the biggest person (marked white here).
+    frame[:, 600:1270] = 255
+    crop = bonus_crop(frame, [(560, 0, 1280, 720), (0, 280, 190, 650)])
+    assert crop[:, -50:].mean() > 200
+
+
+def test_bonus_round_only_picks_listed_doable_pictures(tmp_path):
+    import json
+
+    import cv2
+
+    from outofframe import game as G
+    from outofframe.config import Config
+    from outofframe.pose import Gallery
+
+    k, c = _pose_kpts()
+    names = ("tree_pose_1", "gymnast_2", "scarecrow_1")
+    for n in names:
+        cv2.imwrite(str(tmp_path / f"{n}.jpg"), np.zeros((8, 8, 3), np.uint8))
+    (tmp_path / "index.json").write_text(json.dumps({f"{n}.jpg": {
+        "manual": True, "kpts": k.tolist(), "conf": c.tolist(), "bbox": [0, 0, 8, 8]} for n in names}))
+    (tmp_path / "bonus.txt").write_text("# doable\ntree_pose_1.jpg\n\nscarecrow_1.jpg\n")
+    gallery = Gallery.load(tmp_path, None)
+    assert len(gallery.items) == 3
+    assert {i.path.stem for i in gallery.bonus_items} == {"tree_pose_1", "scarecrow_1"}
+    game = G.Game(Config(), VirtualFramer(VirtualFramerCfg()), None, rng=random.Random(0),
+                  gallery=gallery)
+    assert {game._pick_bonus().path.stem for _ in range(20)} == {"tree_pose_1", "scarecrow_1"}
+
+
+def test_shipped_bonus_list_matches_the_gallery():
+    from pathlib import Path
+
+    from outofframe.pose import Gallery
+
+    gallery = Gallery.load(Path(__file__).resolve().parent.parent / "gallery", None)
+    assert 40 <= len(gallery.bonus_items) < len(gallery.items)
+    assert not any("gymnast" in i.path.stem or "handstand" in i.path.stem for i in gallery.bonus_items)
+
+
+def test_tunnel_address_used_for_links_and_restarted(tmp_path):
+    import stat
+    import time
+
+    from outofframe.config import ShareCfg
+    from outofframe.share import PhotoStore, ShareServer
+
+    # Stand-in for cloudflared: prints a quick-tunnel address (a new one each run), then
+    # the first run exits to check the restart.
+    fake = tmp_path / "cloudflared"
+    count = tmp_path / "runs"
+    fake.write_text(
+        "#!/bin/sh\n"
+        f"n=$(cat {count} 2>/dev/null || echo 0); n=$((n+1)); echo $n > {count}\n"
+        "echo 'INF Requesting new quick Tunnel on trycloudflare.com...'\n"
+        "echo \"INF |  https://fake-run-$n.trycloudflare.com  |\"\n"
+        "[ $n -eq 1 ] && exit 1\n"
+        "sleep 30\n")
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    cfg = ShareCfg(port=0, tunnel="cloudflare", cloudflared=str(fake), tunnel_wait_s=5)
+    share = ShareServer(PhotoStore(str(tmp_path / "data")), cfg).start()
+    try:
+        # (While cloudflared restarts, the LAN address is used; then the new public one.)
+        deadline = time.time() + 10
+        while "fake-run-2" not in share.base_url and time.time() < deadline:
+            time.sleep(0.2)
+        assert share.base_url == "https://fake-run-2.trycloudflare.com"  # restarted after exit
+        assert share.url_for("abc123").startswith("https://fake-run-2.trycloudflare.com/p/")
+    finally:
+        share.stop()
+    assert share.tunnel._proc.poll() is not None  # cloudflared stopped with the game
+
+
+def test_leads_are_saved_locally(tmp_path):
+    from outofframe.share import PhotoStore
+
+    store = PhotoStore(str(tmp_path))
+    store.add_lead("abc123", "Ada", "ada@example.com", "Scouts", True)
+    rows = (tmp_path / "leads.csv").read_text().splitlines()
+    assert rows[0].startswith("time,photo_id,name,email,company") and "ada@example.com" in rows[1]
+
+
+def test_frame_guard_waits_restarts_and_survives_errors():
+    import pytest
+
+    from outofframe.window import FrameGuard
+
+    g = FrameGuard(stale_s=2, restart_s=15, startup_s=45, max_errors=5, window_s=60)
+    g._start = 0.0
+    f = np.zeros((4, 4, 3), np.uint8)
+    assert g.fresh(None, 0.0, 10.0) is None  # no camera yet, still starting up
+    assert g.fresh(f, 50.0, 40.0 + 10.0) is f  # first frame
+    assert g.fresh(f, 50.0, 53.0) is None  # same frame for 3 s: stale -> "Waiting for camera"
+    with pytest.raises(SystemExit) as e:
+        g.fresh(f, 50.0, 66.0)  # nothing new for 16 s: restart the game
+    assert e.value.code == 75
+    g2 = FrameGuard(max_errors=5, window_s=60)
+    for t in range(5):
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            g2.error(float(t))  # five errors: keep going
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        with pytest.raises(SystemExit) as e:
+            g2.error(5.0)
+    assert e.value.code == 70
+    g3 = FrameGuard(max_errors=5, window_s=60)
+    for t in range(0, 600, 30):  # one error every 30 s, forever: never exits
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            g3.error(float(t))
+
+
+def test_result_text_tells_misses_from_catches():
+    from outofframe.collage import result_line, tally
+    from outofframe.detector import ShotVerdict
+    from outofframe.game import Shot
+
+    def shots(*kinds):
+        v = {"spotted": ShotVerdict(True, 1, 1, False), "missed": ShotVerdict(True, 0, 0, True),
+             "dodged": ShotVerdict(False, 0, 1, False)}
+        return [Shot(None, None, v[k]) for k in kinds]
+
+    four_misses = shots("missed", "missed", "missed", "missed")
+    assert tally(four_misses) == (0, 4, 0)
+    assert result_line(four_misses) == "You were out of view in 4 of 4 photos. Stay in frame!"
+    assert result_line(shots("spotted", "spotted", "dodged", "dodged")) == "You were spotted in 2 of 4 photos."
+    assert result_line(shots("spotted", "missed", "dodged", "dodged")) == \
+        "You were spotted in 1 of 4 photos and out of view in 1."
+
+
+def _gop_run(pattern, guard=None):
+    """Feed 'K'/'P' frames and return the clean flags."""
+    from outofframe.camera import GopGuard
+
+    g = guard or GopGuard()
+    return [g.see(c == "K") for c in pattern]
+
+
+def test_gop_guard_skips_until_first_keyframe():
+    assert _gop_run("PPPKPP") == [False, False, False, True, True, True]
+
+
+def test_gop_guard_flags_lost_keyframe_until_next():
+    gop = "K" + "P" * 24
+    flags = _gop_run(gop * 3 + "P" * 25 + gop)  # 4th keyframe never arrived
+    assert all(flags[:75])
+    assert not any(flags[75:100])
+    assert all(flags[100:])
+
+
+def test_gop_guard_stays_clean_on_a_steady_stream():
+    gop = "K" + "P" * 24
+    flags = _gop_run("PPP" + gop * 20)  # joined mid-GOP, then 20 good GOPs
+    assert not any(flags[:3]) and all(flags[3:])
+
+
+def test_paste_fill_covers_rect_and_keeps_subject():
+    from outofframe import render as R
+
+    canvas = np.zeros((300, 300, 3), np.uint8)
+    img = np.full((90, 160, 3), 200, np.uint8)  # 16:9 into a square: sides get cropped
+    assert R.paste_fill(canvas, img, (50, 50, 250, 250), radius=20) == (50, 50, 250, 250)
+    assert canvas[70:230, 50:250].min() == 200  # no bars (below and above the 20 px corners)
+    assert canvas[50, 50].max() == 0  # rounded corner left alone
+    img[:, :20] = 0  # subject at the far left edge: the crop follows it
+    canvas[:] = 0
+    R.paste_fill(canvas, img, (0, 0, 200, 200), keep=(0, 0, 20, 90))
+    assert canvas[100, 0].max() == 0 and canvas[100, 199].max() == 200
+    canvas[:] = 7  # subject wider than any crop: whole picture on a backdrop, still no bars
+    R.paste_fill(canvas, img, (0, 0, 200, 200), keep=(0, 0, 160, 90))
+    assert (canvas[:200, :200] != 7).any(axis=2).all()

@@ -1,17 +1,22 @@
-# Caught by Scouts — the dronebooth
+# Scouts Drone Booth
 
 Part of The Scouts booth at Safety & Security Asia 2026. Its sibling game is in `../out-of-frame`.
 
-A live "surveillance" view shows the camera feed, with an amber **SCANNING...** box on every person.
-A visitor presses `SPACE`, gets a 3-2-1 countdown and a flash, and the souvenir photo is created.
-The photo has a security-cam look: every person gets a red **THREAT DETECTED** box with a body
-outline. It also carries a case number, a timestamp, the event name and thescouts.io.
-The booth screen then shows the photo next to a **QR code**.
+A live "surveillance" view shows the camera feed, with an amber **SCANNING...** box on every person,
+and QR codes for The Scouts' Instagram and LinkedIn in the bottom corners (`display.socials`).
+A visitor presses `SPACE`, gets a 3-2-1 countdown and a flash, and the souvenir photo is created:
+1080×1440 (Instagram's 3:4 portrait), framed like Out of Frame's collage: "Drone Booth" header with the
+event and date, the camera shot (cropped around the people in it) as a rounded panel, and
+"Scouts Drone Booth" / thescouts.io at the bottom. The shot has a security-cam look: every person gets a
+red **THREAT DETECTED** box with a body outline, plus a case number and timestamp.
+The booth screen then shows the photo next to a **QR code** until `SPACE` (next visitor) or `R` (retake).
 
 Scanning the QR opens a page on the visitor's phone. It shows a blurred preview and a form
 (name, email, optional company, optional marketing consent). Submitting the form unlocks the
 full photo, with Download and Share buttons. Share uses the phone's share sheet, so it works with
 WhatsApp, Instagram and so on.
+On the Jetson the page has a public address (Cloudflare tunnel), so it opens on any network; see
+"Photo downloads from any phone" in the top-level README.
 
 ## Run on the Mac
 
@@ -58,6 +63,14 @@ photo spot with the SIYI app.
 ```bash
 python3 -m dronebooth --config configs/jetson.yaml
 ```
+
+## Branding
+
+Screens follow The Scouts brand (thescouts.io): Poppins type, the Scouts logo, and the logo palette
+Ebony `#6d4641`, Dutch `#ffefca`, Powder `#9cadce` and Ink `#0e0e0e`. Fonts and logos are in
+`assets/brand/` (Poppins is SIL Open Font License, see `assets/brand/fonts/OFL.txt`). The palette and the
+Poppins/logo drawing helpers are in `dronebooth/brand.py`. The same file is in both projects, so keep the two copies in sync.
+The phone download page uses the same look and serves the fonts and logo itself (`/brand/...`), so it works without internet.
 
 ## Tests
 

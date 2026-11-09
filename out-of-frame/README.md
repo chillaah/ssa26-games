@@ -1,8 +1,9 @@
 # Out of Frame — The Scouts @ Safety & Security Asia
 
-A booth game. The camera takes 5 photos while its frame swings around at random.
-Stay out of every photo to win a prize. At the end the photos are "developed".
-Any body pixels found inside a photo get tinted red and stamped **CAUGHT**.
+A booth game. The camera takes 4 photos while its frame swings around at random.
+Stay out of every photo to win a prize. Then comes a **bonus round**: copy the pose in a picture
+for a souvenir photo. At the end the photos are "developed". Any body pixels found inside a photo get
+tinted red and stamped **THREAT DETECTED**. The player can download a collage of the game on their phone.
 
 Two ways to run it, sharing the same code:
 
@@ -15,14 +16,35 @@ Two ways to run it, sharing the same code:
 
 ## How a round works
 
-1. **Attract screen.** Press `SPACE` to start.
+1. **Attract screen.** Shows QR codes for The Scouts' Instagram and LinkedIn (`display.socials`;
+   regenerate the images in `assets/` with `tools/make_qr.py`). Press `SPACE` to start.
 2. **Get ready.** 3-second countdown.
-3. **5 photos.** For each one, the frame moves through 1–3 random waypoints ("feints").
+3. **4 photos** (`game.shots`). For each one, the frame moves through 1–3 random waypoints ("feints").
    Then it **locks on**: the box goes yellow, then flashes red, with a progress bar.
    Then it **snaps**. Every round gets faster and the box gets bigger.
-4. **Developing photos.** The photos are revealed one at a time, each marked CLEAR, CAUGHT or MISS.
-5. **Result.** A win shows a 4-character prize code. Every game is logged to `sessions/results.csv`,
-   so staff can check codes. Each session folder also holds the raw, judged and full-frame images.
+4. **Bonus round** (`game.bonus_pose`). A random picture from `gallery/bonus.txt` (66 poses a visitor
+   can copy standing up: no upside-down, airborne, floor or partner poses) is shown next to the live camera:
+   "Copy this pose!". After `game.bonus_s` (6 s, with a 3-2-1) the camera takes one photo, cropped
+   around the players. The pose isn't scored. Pictures don't repeat for the next 30 games.
+5. **Developing photos.** The 4 photos are revealed one at a time, each stamped CLEAR, THREAT DETECTED or MISS
+   (the collage says DODGED, THREAT DETECTED or MISSED).
+6. **Result.** The collage (bonus photo on top with the copied picture inset, the 4 photos in a 2×2
+   grid below) next to a **QR code** to download it, plus a 4-character prize code on a win. It stays
+   up until `SPACE` goes back to the start screen (`SPACE` again starts a new game, `q` quits).
+   Every game is logged to `sessions/results.csv`, so staff can check codes. Each session folder
+   also holds the raw, judged and full-frame images, the bonus photo and `collage.jpg`.
+
+### Collage download
+
+Same flow as the drone booth: the QR opens a page served by the game itself (`outofframe/share.py`,
+port **8081** so it can run next to the booth on 8080). The player enters name + email (stored in
+`sessions/share/leads.csv`) and downloads or shares the collage (1080×1440, Instagram's 3:4 portrait).
+The Jetson configs publish the page through a Cloudflare tunnel (`share.tunnel: cloudflare`) so any phone
+can open it, on any network; see "Photo downloads from any phone" in the top-level README. The Mac
+configs serve it on the local network only. Turn it off with `share.enabled: false`;
+`share.require_details: false` makes the details optional.
+
+The results screen stays up until `SPACE` (back to the start screen).
 
 A person counts as caught when their segmentation mask covers at least `min_body_frac`
 (0.1%) of the photo, or `min_body_px` pixels, whichever is larger. So even a hand or an elbow counts.
@@ -30,6 +52,28 @@ A person counts as caught when their segmentation mask covers at least `min_body
 In **virtual mode** the wide view is visible, so a player must also be in view at every snap
 (`require_player_in_view`). Otherwise walking off camera would be an easy win. If nobody is in
 view, the photo is stamped **MISS** and still counts as a loss.
+
+## Gallery and pose match
+
+The bonus round picks from `gallery/`. Optionally (`pose.match_each_snap: true`, off by default), the
+game also finds the player's pose after each snap and shows the `gallery/` picture that matches it best
+("POSE MATCH!"), like the pose-match TikToks. The bundled gallery is 158 public-domain / CC0 photos
+from Wikimedia Commons (athletes, dancers, martial artists, performers, statues, animals); see `gallery/CREDITS.md`.
+The most similar picture is always shown, even if it was shown before.
+
+- Drop images (`.jpg`/`.png`) into `gallery/`. Poses are read automatically on the next start and cached in
+  `gallery/index.json`. Images with no person found are skipped.
+- For a picture the pose model can't read (an animal, a letter), write its keypoints into `index.json`
+  by hand with `"manual": true`.
+- `gallery/bonus.txt` lists the pictures the bonus round may show, one file name per line. Add a new
+  picture there only if anyone could copy it in the booth.
+- Check a photo against the gallery: `python -m outofframe.pose --test photo.jpg`
+- No picture is shown when the player is just standing still (`pose.max_neutral`): players are asked to
+  strike a pose at every snap.
+- Settings: `pose.show_s` (time on screen), `pose.min_score` (weakest match still shown), `pose.enabled`
+  (or run with `--no-pose` to turn the gallery off for one run: no bonus round, no pose match).
+- New pictures are only indexed when the pose model is loaded (`match_each_snap`, or
+  `python -m outofframe.pose`); the bonus round uses the cached poses in `index.json`.
 
 ## Run on the Mac
 
@@ -121,6 +165,13 @@ The most useful ones:
 - Passers-by in the background will "catch" the player. Point the camera so the play area
   has a backdrop (a wall or a banner) rather than the aisle.
 - Mark the play area on the floor with tape.
+
+## Branding
+
+Screens follow The Scouts brand (thescouts.io): Poppins type, the Scouts logo, and the logo palette
+Ebony `#6d4641`, Dutch `#ffefca`, Powder `#9cadce` and Ink `#0e0e0e`. Fonts and logos are in
+`assets/brand/` (Poppins is SIL Open Font License, see `assets/brand/fonts/OFL.txt`). The palette and the
+Poppins/logo drawing helpers are in `outofframe/brand.py`. The same file is in both projects, so keep the two copies in sync.
 
 ## Tests
 

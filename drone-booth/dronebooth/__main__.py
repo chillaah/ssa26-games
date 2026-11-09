@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import logging
+import os
+import sys
 import time
-
-import cv2
 
 from .camera import Camera
 from .detector import PersonDetector
@@ -13,10 +14,11 @@ from .detector import PersonDetector
 from .booth import Booth, LiveScanner
 from .config import load_booth_config
 from .server import PhotoStore, ShareServer
+from .window import FrameGuard, GameWindow, quit_on_signals
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Caught by Scouts - dronebooth")
+    ap = argparse.ArgumentParser(description="Scouts Drone Booth")
     ap.add_argument("--config", default="configs/booth_mac.yaml")
     ap.add_argument("--source", help="override camera source (index, rtsp://, gst:..., file)")
     ap.add_argument("--fullscreen", action="store_true")
@@ -31,42 +33,49 @@ def main() -> None:
     if args.fullscreen:
         cfg.display.fullscreen = True
 
-    detector = PersonDetector(cfg.detector)
-    detector.warmup()
-    store = PhotoStore(cfg.booth.data_dir)
-    share = ShareServer(store, cfg.share).start()
-    print(f"\n  Visitors' phones open: {share.base_url}/p/<photo>\n")
-    camera = Camera(cfg.camera).start()
-    scanner = LiveScanner(camera, detector)
-    booth = Booth(cfg, scanner, store, share)
+    quit_on_signals()
+    # Everything started below is stopped again in reverse order, however the booth ends:
+    # close button, q/Esc, closing the window, Ctrl+C, pkill or closing the terminal.
+    with contextlib.ExitStack() as stack:
+        try:
+            detector = PersonDetector(cfg.detector)
+            detector.warmup()
+            store = PhotoStore(cfg.booth.data_dir)
+            share = ShareServer(store, cfg.share).start()
+            stack.callback(share.stop)
+            print(f"\n  Visitors' phones open: {share.base_url}/p/<photo>\n")
+            camera = Camera(cfg.camera).start()
+            stack.callback(camera.stop)
+            scanner = LiveScanner(camera, detector)
+            stack.callback(scanner.stop)
+            booth = Booth(cfg, scanner, store, share)
 
-    win = cfg.display.window_name
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
-    fullscreen = cfg.display.fullscreen
-    cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN,
-                          cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
-    if not fullscreen:
-        cv2.resizeWindow(win, cfg.display.width // 2, cfg.display.height // 2)
-
-    try:
-        while not booth.quit:
-            frame, _ = camera.read()
-            now = time.monotonic()
-            cv2.imshow(win, booth.step(now, frame))
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("f"):
-                fullscreen = not fullscreen
-                cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN,
-                                      cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
-            elif key != 255:
-                booth.on_key(key, now)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        scanner.stop()
-        camera.stop()
-        share.stop()
-        cv2.destroyAllWindows()
+            window = GameWindow(cfg.display.window_name, cfg.display.fullscreen,
+                                (cfg.display.width, cfg.display.height))
+            stack.callback(window.destroy)
+            guard = FrameGuard()
+            while not (booth.quit or window.close_requested):
+                now = time.monotonic()
+                frame, frame_t = camera.read()
+                frame = guard.fresh(frame, frame_t, now)
+                try:
+                    window.show(booth.step(now, frame))
+                    key = window.poll()
+                    if key != 255:
+                        booth.on_key(key, now)
+                except Exception:
+                    guard.error(now)
+                    booth.reset(now)
+        except KeyboardInterrupt:
+            pass
+        logging.info("Shutting down")
+    logging.info("Closed cleanly")
+    # Everything is stopped and saved. Exit now with code 0: native threads (GStreamer, TensorRT)
+    # can abort Python's own teardown, and a non-zero exit would make the launcher restart the game.
+    logging.shutdown()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

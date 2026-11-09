@@ -3,8 +3,10 @@
 camera:
   # Hardware-decoded RTSP from the A8 mini. It streams H.265 even though the path is "main.264";
   # if it is switched to H.264, swap rtph265depay/h265parse for rtph264depay/h264parse.
+  # protocols=tcp: over UDP the Jetson dropped packets at 1080p (kernel receive buffer full),
+  # which smudges the picture until the next keyframe. TCP lost none in the same test.
   source: >-
-    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 !
+    gst:rtspsrc location=rtsp://192.168.144.25:8554/main.264 protocols=tcp latency=0 !
     rtph265depay ! h265parse ! nvv4l2decoder ! nvvidconv !
     video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR !
     appsink drop=1 max-buffers=1 sync=false
@@ -18,10 +20,11 @@ framer:
     follow_gimbal: true
     follow_yaw_deg: 6            # lean when the box reaches the left/right edge
     follow_pitch_deg: 4          # lean when the box reaches the top/bottom edge
-    # Measured on the A8 mini in upside-down mode: +yaw turns the camera toward the right of its
-    # (unmirrored) image and +pitch aims it lower, so both axes are flipped here.
-    follow_invert_yaw: true
-    follow_invert_pitch: true
+    # Measured on the A8 mini mounted for the event (2026-11-06): +yaw turns the camera toward the
+    # left of its (unmirrored) image and +pitch aims it higher, so neither axis is flipped. Set both
+    # to true if the camera is used upright on a table in upside-down mode.
+    follow_invert_yaw: false
+    follow_invert_pitch: false
   siyi:
     link: udp
     ip: 192.168.144.25
@@ -37,8 +40,11 @@ detector:
   half: true
 
 game:
-  shots: 5
+  shots: 4   # dodge rounds, then the bonus pose round
   require_player_in_view: true   # walking off camera doesn't count as a dodge
 
 display:
   fullscreen: true
+
+share:
+  tunnel: cloudflare   # public https address, so phones on any network can download
